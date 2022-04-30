@@ -1,11 +1,16 @@
 package ir.sadeqcloud.gateway;
 
+import ir.sadeqcloud.gateway.constants.PropertyConstants;
 import ir.sadeqcloud.gateway.model.TransferRequest;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.support.serializer.JsonSerializer;
@@ -15,6 +20,7 @@ import java.util.HashMap;
 @SpringBootApplication
 public class GatewayApplication {
 
+    @DependsOn("constants")
     public static void main(String[] args) {
         SpringApplication.run(GatewayApplication.class, args);
     }
@@ -43,6 +49,10 @@ public class GatewayApplication {
     @Bean
     public KafkaTemplate<String, TransferRequest> kafkaTemplate(){
         return new KafkaTemplate(producerFactory());
+    }
+    @Bean
+    public NewTopic createTopic(){
+        return TopicBuilder.name(PropertyConstants.getProducerTopic()).partitions(2).replicas(1).build();
     }
 
 }

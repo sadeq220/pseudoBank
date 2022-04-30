@@ -1,5 +1,6 @@
 package ir.sadeqcloud.gateway.service;
 
+import ir.sadeqcloud.gateway.constants.PropertyConstants;
 import ir.sadeqcloud.gateway.model.TransferRequest;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +24,7 @@ public class PublishTransferRequest {
          * assume AccountNo as key to avoid parallel processing on consumer side
          * this ensures multiple transfer on single Account are always on same partition
          */
-        ProducerRecord<String,TransferRequest> transferReq = new ProducerRecord("transferReq", transferRequest.getAccountNo(), transferRequest);
+        ProducerRecord<String,TransferRequest> transferReq = new ProducerRecord(PropertyConstants.getProducerTopic(), transferRequest.getAccountNo(), transferRequest);
         /**
          * producer.send() is asynchronous by it's nature
          */
