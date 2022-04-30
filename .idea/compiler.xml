@@ -11,7 +11,6 @@
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="coreMack (1)" target="11" />
       <module name="coreMock" target="11" />
       <module name="gateway" target="11" />
     </bytecodeTargetLevel>
