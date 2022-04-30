@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/coreMack/coreMack.iml" filepath="$PROJECT_DIR$/coreMack/coreMack.iml" />
+      <module fileurl="file://$PROJECT_DIR$/coreMack/coreMock.iml" filepath="$PROJECT_DIR$/coreMack/coreMock.iml" />
       <module fileurl="file://$PROJECT_DIR$/gateway/gateway.iml" filepath="$PROJECT_DIR$/gateway/gateway.iml" />
     </modules>
   </component>

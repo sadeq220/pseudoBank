@@ -6,20 +6,20 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="coreMock" />
         <module name="gateway" />
-        <module name="coreMack" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="coreMack" target="11" />
       <module name="coreMack (1)" target="11" />
+      <module name="coreMock" target="11" />
       <module name="gateway" target="11" />
     </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="coreMack" options="-parameters" />
       <module name="coreMack (1)" options="-parameters" />
+      <module name="coreMock" options="-parameters" />
       <module name="gateway" options="-parameters" />
     </option>
   </component>

@@ -1,0 +1,4 @@
+[submodule "coreMock"]
+	path=coreMock
+	url=git@github.com:sadeq220/kafkaStreamRedis.git
+
