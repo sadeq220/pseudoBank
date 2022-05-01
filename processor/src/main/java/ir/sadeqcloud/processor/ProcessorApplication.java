@@ -1,6 +1,9 @@
 package ir.sadeqcloud.processor;
 
 import ir.sadeqcloud.processor.config.KafkaStreamInfrastructureConfig;
+import ir.sadeqcloud.processor.model.TransferRequest;
+import org.apache.kafka.common.serialization.Serde;
+import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.springframework.beans.factory.FactoryBean;
@@ -18,6 +21,8 @@ import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 import org.springframework.kafka.config.KafkaStreamsConfiguration;
 import org.springframework.kafka.config.KafkaStreamsInfrastructureCustomizer;
 import org.springframework.kafka.config.StreamsBuilderFactoryBean;
+import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.kafka.support.serializer.JsonSerializer;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -68,6 +73,12 @@ public class ProcessorApplication {
         StreamsBuilderFactoryBean streamsBuilderFactoryBean = new StreamsBuilderFactoryBean(kafkaStreamsConfiguration());
         streamsBuilderFactoryBean.setInfrastructureCustomizer(new KafkaStreamInfrastructureConfig());// to add state store to streamsBuilder
         return streamsBuilderFactoryBean;
+    }
+    @Bean
+    public Serde<TransferRequest> inputJsonSerde(){
+        JsonSerializer<TransferRequest> transferRequestJsonSerializer = new JsonSerializer<>();
+        JsonDeserializer<TransferRequest> transferRequestJsonDeserializer = new JsonDeserializer<>();
+        return Serdes.serdeFrom(transferRequestJsonSerializer,transferRequestJsonDeserializer);
     }
     @Bean
     /**
