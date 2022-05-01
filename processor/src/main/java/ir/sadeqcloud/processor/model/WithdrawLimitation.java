@@ -1,5 +1,7 @@
 package ir.sadeqcloud.processor.model;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+
 import java.math.BigDecimal;
 
 public class WithdrawLimitation {
@@ -25,5 +27,17 @@ public class WithdrawLimitation {
 
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj==this)
+            return true;
+        if (!(obj instanceof WithdrawLimitation))
+            return false;
+        WithdrawLimitation withdrawLimitation = (WithdrawLimitation) obj;
+        EqualsBuilder equalsBuilder = new EqualsBuilder();
+        equalsBuilder.append(correlationId,withdrawLimitation.correlationId);
+        return equalsBuilder.isEquals();
     }
 }

@@ -30,12 +30,29 @@ public class RedisDao {
         this.limitationJsonSerde=limitationJsonSerde;
 
     }
+
+    /**
+     * add string json to head of the redis list
+     */
     public void addAccountWithdrawLimitation(TransferRequest transferRequest){
         String withdrawLimitModelAsString = limitationJsonSerde.serializeWithdrawModel(transferRequest.buildLimitationModel());
         stringListOperations.leftPush(ACCOUNT_KEY_PREFIX+transferRequest.getAccountNo(),withdrawLimitModelAsString);
     }
+
+    /**
+     * -1 index represents final element
+     */
     public List<WithdrawLimitation> getAccountWithdraws(String accountNo){
         List<String> withdrawAsStringList = stringListOperations.range(ACCOUNT_KEY_PREFIX + accountNo, 0, -1);
         return withdrawAsStringList.stream().map(limitationJsonSerde::deserializeWithdrawModel).collect(Collectors.toList());
+    }
+
+    /**
+     * reverse on Account
+     */
+    public Boolean removeAccountWithdrawLimitation(String accountNo,WithdrawLimitation withdrawLimitation){
+        String withdrawModelAsString = limitationJsonSerde.serializeWithdrawModel(withdrawLimitation);
+        Long removedElements = stringListOperations.remove(ACCOUNT_KEY_PREFIX + accountNo, 1, withdrawModelAsString);
+        return removedElements>0;
     }
 }
