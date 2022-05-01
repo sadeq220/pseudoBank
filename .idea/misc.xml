@@ -5,6 +5,7 @@
       <list>
         <option value="$PROJECT_DIR$/coreMack/pom.xml" />
         <option value="$PROJECT_DIR$/gateway/pom.xml" />
+        <option value="$PROJECT_DIR$/processor/pom.xml" />
       </list>
     </option>
   </component>
