@@ -2,8 +2,8 @@ package ir.sadeqcloud.processor.service;
 
 /**
  * common base class to request core module
- * it could be implemented with several protocols
+ * it could be implemented with multiple protocols
  */
-public interface CoreGateWay {
+public interface CoreGateway {
     void reverseWithdraw();
 }
