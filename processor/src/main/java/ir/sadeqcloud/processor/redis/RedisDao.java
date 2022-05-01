@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 public class RedisDao {
     private StringRedisTemplate stringRedisTemplate;
     private LimitationJsonSerde limitationJsonSerde;
-    private final String ACCOUNT_KEY_PREFIX="Account:";
+    private final String ACCOUNT_KEY_PREFIX="Account:";//TODO convert it to Enum
     /**
      * In Redis, a list is a collection of strings sorted by insertion order, similar to linked lists.
      *  Redis reads lists from left to right,
