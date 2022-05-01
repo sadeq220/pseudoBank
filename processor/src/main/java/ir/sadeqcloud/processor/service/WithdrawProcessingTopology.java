@@ -14,14 +14,18 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class WithdrawProcessingTopology {
+    private AccountOperations accountOperations;
     private Serde<TransferRequest> transferRequestSerde;
     @Autowired
-    public WithdrawProcessingTopology(Serde<TransferRequest> transferRequestSerde){
+    public WithdrawProcessingTopology(Serde<TransferRequest> transferRequestSerde,
+                                      AccountOperations accountOperations){
         this.transferRequestSerde=transferRequestSerde;
+        this.accountOperations=accountOperations;
     }
     @Bean
-    public KStream<String,TransferRequest> sourceProcessing(@Qualifier("streamsBuilderFactoryBean") StreamsBuilder streamsBuilder){
+    public KStream<String,TransferRequest> sourceProcessing(StreamsBuilder streamsBuilder){
     return streamsBuilder.stream(PropertyConstants.getInputTopic(),
-            Consumed.with(Serdes.String(),transferRequestSerde).withName("source-node"));
+            Consumed.with(Serdes.String(),transferRequestSerde).withName("source-node")).
+            filter((k,v)->accountOperations.checkWithdrawLimitationThresholdNotPassed(v));
     }
 }
