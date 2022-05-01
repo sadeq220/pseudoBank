@@ -4,8 +4,13 @@ import java.math.BigDecimal;
 
 public class WithdrawLimitation {
     private String correlationId;
-    private BigDecimal amount;;
-
+    private BigDecimal amount;
+    public WithdrawLimitation(){ // default constructor for deserializer
+     }
+    public WithdrawLimitation(String correlationId,BigDecimal amount){
+        this.amount=amount;
+        this.correlationId=correlationId;
+    }
     public String getCorrelationId() {
         return correlationId;
     }

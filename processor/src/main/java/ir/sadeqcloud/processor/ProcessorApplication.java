@@ -61,7 +61,7 @@ public class ProcessorApplication {
         kafkaStreamConfigs.put(StreamsConfig.METRICS_RECORDING_LEVEL_CONFIG,"TRACE");
         return new KafkaStreamsConfiguration(kafkaStreamConfigs);
     }
-    @Bean
+    @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_BUILDER_BEAN_NAME)
     /**
      * ease "KafkaStreams" lifecycle management
      *
@@ -75,6 +75,9 @@ public class ProcessorApplication {
         return streamsBuilderFactoryBean;
     }
     @Bean
+    /**
+     * TODO return new JsonSerde<TransformRequest>();
+     */
     public Serde<TransferRequest> inputJsonSerde(){
         JsonSerializer<TransferRequest> transferRequestJsonSerializer = new JsonSerializer<>();
         JsonDeserializer<TransferRequest> transferRequestJsonDeserializer = new JsonDeserializer<>();

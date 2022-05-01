@@ -49,4 +49,7 @@ public class TransferRequest {
     public void setRequestType(RequestType requestType) {
         this.requestType = requestType;
     }
+    public WithdrawLimitation buildLimitationModel(){
+        return new WithdrawLimitation(correlationId,amount);
+    }
 }
