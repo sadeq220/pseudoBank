@@ -38,28 +38,32 @@ public class WithdrawProcessingTopology {
     @Bean
     private void branchStream(@Qualifier("topologySourceNode") KStream<String,TransferRequest> sourceNode){
          new KafkaStreamBrancher<String, TransferRequest>().
-                 branch((string, transferRequest) -> transferRequest.getRequestType() == RequestType.PROCEED_WITHDRAW, ks -> withdrawBranching(ks))
+                 branch((string, transferRequest) -> transferRequest.getRequestType() == RequestType.PROCEED_WITHDRAW, ks -> withdrawProcessing(ks))
                  .branch((string,transferRequest)->transferRequest.getRequestType()==RequestType.REVERSE,ks->reverseProcessing(ks)).
                  onTopOf(sourceNode);
     }
 
-    public void withdrawBranching(KStream<String,TransferRequest> withdrawBranch){
-        // deprecated branch() method replaced by split() method
-         withdrawBranch.
-                split(Named.as("withdraw-"))
-                .branch((str,transferRequest)-> !accountOperations.checkWithdrawLimitationThresholdNotPassed(transferRequest), Branched.withConsumer(ks->produceFailureDueToAccountLimitation(ks), "FAILURE_ACCOUNT"))
-                .defaultBranch(Branched.withConsumer(ks->successfulWithdrawProcessing(ks),"SUCCESS"));
-                //filter((k,v)->!accountOperations.checkWithdrawLimitationThresholdNotPassed(v));
+    public KStream withdrawProcessing(KStream<String,TransferRequest> withdrawBranch){
+        return withdrawBranch.
+                mapValues(transferRequest -> TransferResponse.builderFactory(transferRequest),Named.as("mapperToResponse"))
+                .mapValues(transferResponse -> {
+                    if (accountOperations.checkWithdrawLimitationThresholdNotPassed(transferResponse))
+                        return transferResponse;
+                    transferResponse.addResponseStatus(ResponseStatus.FAILURE_ACCOUNT);
+                    return transferResponse;
+                },Named.as("CHECK_ACCOUNT_FAILURE"))
+                .mapValues(transferResponse -> {
+                    return transferResponse;
+                },Named.as("CHECK_BRANCH_FAILURE"));
     }
     public void reverseProcessing(KStream<String,TransferRequest> reverseBranch){
 
     }
     private void successfulWithdrawProcessing(KStream<String,TransferRequest> successfulTransfer){
-        successfulTransfer.mapValues(transferRequest -> new TransferResponse(transferRequest.getCorrelationId(),ResponseStatus.SUCCESS))
+        successfulTransfer.mapValues(transferRequest ->{
+            accountOperations.addSuccessfulWithdrawToAccountLimitation(transferRequest);// add successful withdraw to the list of Account successful withdraws
+            return TransferResponse.builderFactory(transferRequest);
+        })
                 .to(outputTopic,Produced.with(stringSerde,transferResponseSerde));
-    }
-    private void produceFailureDueToAccountLimitation(KStream<String,TransferRequest> failureStream){
-    failureStream.mapValues(transferRequest -> new TransferResponse(transferRequest.getCorrelationId(), ResponseStatus.FAILURE_ACCOUNT))
-            .to(outputTopic, Produced.with(stringSerde,transferResponseSerde));
     }
 }

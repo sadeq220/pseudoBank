@@ -1,30 +1,36 @@
 package ir.sadeqcloud.processor.model;
 
-public class TransferResponse {
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonGetter;
+import ir.sadeqcloud.processor.exception.BusinessException;
+import org.springframework.util.ReflectionUtils;
 
-    private String correlationId;
-    private ResponseStatus responseStatus;
+import java.util.*;
+
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE)
+public class TransferResponse extends TransferRequest{
+
+    private Set<ResponseStatus> responseStatuses=new LinkedHashSet<>();
 
     protected TransferResponse(){
         //empty constructor to comply with POJO
     }
-    public TransferResponse(String correlationId,ResponseStatus responseStatus){
-        this.correlationId=correlationId;
-        this.responseStatus=responseStatus;
-    }
+    @JsonGetter
     public String getCorrelationId() {
-        return correlationId;
+        return super.getCorrelationId();
     }
-
-    public void setCorrelationId(String correlationId) {
-        this.correlationId = correlationId;
+    @JsonGetter
+    public Set<ResponseStatus> getResponseStatuses(){
+        return Collections.unmodifiableSet(responseStatuses);
     }
-
-    public ResponseStatus getResponseStatus() {
-        return responseStatus;
+    public void addResponseStatus(ResponseStatus responseStatus){
+     responseStatuses.add(responseStatus);
     }
-
-    public void setResponseStatus(ResponseStatus responseStatus) {
-        this.responseStatus = responseStatus;
+    public static TransferResponse builderFactory(TransferRequest transferRequest){
+        if (transferRequest==null)
+            return null;
+        TransferResponse transferResponse = new TransferResponse();
+        ReflectionUtils.shallowCopyFieldState(transferRequest,transferResponse);
+        return transferResponse;
     }
 }

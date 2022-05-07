@@ -49,4 +49,7 @@ public class AccountOperations {
         redisDao.removeAccountWithdrawLimitation(transferRequest.getAccountNo(),actualWithdrawLimitation);
         //TODO request gateway to do reverse on core module
     }
+    public void addSuccessfulWithdrawToAccountLimitation(TransferRequest transferRequest){
+        redisDao.addAccountWithdrawLimitation(transferRequest);
+    }
 }
