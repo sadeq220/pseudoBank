@@ -1,4 +1,4 @@
-package ir.sadeqcloud.processor.redis;
+package ir.sadeqcloud.processor.model;
 
 public enum LimitationKeyPrefix {
     ACCOUNT("Account:"),

@@ -1,6 +1,7 @@
-package ir.sadeqcloud.processor.service.operations;
+package ir.sadeqcloud.processor.service.operations.RedisOperation;
 
 import ir.sadeqcloud.processor.redis.RedisDao;
+import ir.sadeqcloud.processor.service.operations.RedisOperation.AbstractRedisDataStoreOperations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

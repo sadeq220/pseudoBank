@@ -1,5 +1,6 @@
 package ir.sadeqcloud.processor.redis;
 
+import ir.sadeqcloud.processor.model.LimitationKeyPrefix;
 import ir.sadeqcloud.processor.model.TransferRequest;
 import ir.sadeqcloud.processor.model.WithdrawLimitation;
 import ir.sadeqcloud.processor.util.LimitationJsonSerde;

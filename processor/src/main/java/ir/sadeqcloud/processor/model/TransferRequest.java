@@ -1,7 +1,6 @@
 package ir.sadeqcloud.processor.model;
 
 import ir.sadeqcloud.processor.exception.BusinessException;
-import ir.sadeqcloud.processor.redis.LimitationKeyPrefix;
 
 import java.math.BigDecimal;
 

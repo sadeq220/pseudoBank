@@ -1,4 +1,4 @@
-package ir.sadeqcloud.processor.service;
+package ir.sadeqcloud.processor.service.gateway;
 
 /**
  * common base class to request core module
