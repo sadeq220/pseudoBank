@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 public class RedisDao {
     private StringRedisTemplate stringRedisTemplate;
     private LimitationJsonSerde limitationJsonSerde;
-    private final String ACCOUNT_KEY_PREFIX="Account:";//TODO convert it to Enum
+
     /**
      * In Redis, a list is a collection of strings sorted by insertion order, similar to linked lists.
      *  Redis reads lists from left to right,
@@ -34,25 +34,34 @@ public class RedisDao {
     /**
      * add string json to head of the redis list
      */
-    public void addAccountWithdrawLimitation(TransferRequest transferRequest){
+    private void addWithdrawLimitation(RedisLimitationKeyPrefix keyPrefix,TransferRequest transferRequest,String keyIdentifier){
         String withdrawLimitModelAsString = limitationJsonSerde.serializeWithdrawModel(transferRequest.buildLimitationModel());
-        stringListOperations.leftPush(ACCOUNT_KEY_PREFIX+transferRequest.getAccountNo(),withdrawLimitModelAsString);
+        stringListOperations.leftPush(keyPrefix.getKeyPrefix()+keyIdentifier,withdrawLimitModelAsString);
+    }
+    public void addAccountWithdrawLimitation(RedisLimitationKeyPrefix keyPrefix,TransferRequest transferRequest){
+        addWithdrawLimitation(keyPrefix,transferRequest,transferRequest.getAccountNo());
     }
 
     /**
      * -1 index represents final element
      */
-    public List<WithdrawLimitation> getAccountWithdraws(String accountNo){
-        List<String> withdrawAsStringList = stringListOperations.range(ACCOUNT_KEY_PREFIX + accountNo, 0, -1);
+    private List<WithdrawLimitation> getWithdraws(RedisLimitationKeyPrefix keyPrefix,String keyIdentifier){
+        List<String> withdrawAsStringList = stringListOperations.range(keyPrefix.getKeyPrefix()+ keyIdentifier, 0, -1);
         return withdrawAsStringList.stream().map(limitationJsonSerde::deserializeWithdrawModel).collect(Collectors.toList());
+    }
+    public List<WithdrawLimitation> getAccountWithdraws(RedisLimitationKeyPrefix keyPrefix,String accountNo){
+        return getWithdraws(keyPrefix,accountNo);
     }
 
     /**
      * reverse on Account
      */
-    public Boolean removeAccountWithdrawLimitation(String accountNo,WithdrawLimitation withdrawLimitation){
+    private Boolean removeWithdrawLimitation(RedisLimitationKeyPrefix keyPrefix,String keyIdentifier,WithdrawLimitation withdrawLimitation){
         String withdrawModelAsString = limitationJsonSerde.serializeWithdrawModel(withdrawLimitation);
-        Long removedElements = stringListOperations.remove(ACCOUNT_KEY_PREFIX + accountNo, 1, withdrawModelAsString);
+        Long removedElements = stringListOperations.remove(keyPrefix.getKeyPrefix() + keyIdentifier, 1, withdrawModelAsString);
         return removedElements>0;
+    }
+    public Boolean removeAccountWithdrawLimitation(RedisLimitationKeyPrefix keyPrefix,String accountNo,WithdrawLimitation withdrawLimitation){
+        return removeWithdrawLimitation(keyPrefix, accountNo, withdrawLimitation);
     }
 }
