@@ -17,6 +17,9 @@ import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.jedis.JedisClientConfiguration;
 import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 import org.springframework.kafka.config.KafkaStreamsConfiguration;
@@ -25,8 +28,11 @@ import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerde;
 import org.springframework.kafka.support.serializer.JsonSerializer;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.web.client.RestTemplate;
 
+import javax.sql.DataSource;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
@@ -129,5 +135,28 @@ public class ProcessorApplication {
          *  Doing so forces binding the current RedisConnection to the current Thread that is triggering MULTI
          */
         return stringRedisTemplate;
+    }
+    @Bean
+    public DataSource dataSource(){
+        EmbeddedDatabaseBuilder embeddedDatabaseBuilder = new EmbeddedDatabaseBuilder();
+        embeddedDatabaseBuilder.setName("ForTransaction");
+        embeddedDatabaseBuilder.setType(EmbeddedDatabaseType.H2);
+        return embeddedDatabaseBuilder.build();
+    }
+
+    @Bean
+    /**
+     * TransactionManager suppose to bind a resource(e.g. JDBC connection,Hibernate Session ) to a thread
+     *
+     * Transaction management requires a PlatformTransactionManager.
+     * Spring Data Redis does not ship with a PlatformTransactionManager implementation.
+     * Assuming your application uses JDBC, Spring Data Redis can participate in transactions by using existing transaction managers.
+     */
+    public PlatformTransactionManager platformTransactionManager(){
+        return new DataSourceTransactionManager(dataSource());
+    }
+    @Bean
+    public RestTemplate restTemplate(){
+        return new RestTemplate();
     }
 }
