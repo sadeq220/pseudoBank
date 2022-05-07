@@ -2,6 +2,7 @@ package ir.sadeqcloud.processor;
 
 import ir.sadeqcloud.processor.config.KafkaStreamInfrastructureConfig;
 import ir.sadeqcloud.processor.model.TransferRequest;
+import ir.sadeqcloud.processor.model.TransferResponse;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -22,6 +23,7 @@ import org.springframework.kafka.config.KafkaStreamsConfiguration;
 import org.springframework.kafka.config.KafkaStreamsInfrastructureCustomizer;
 import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.kafka.support.serializer.JsonSerde;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
 import java.time.Duration;
@@ -82,6 +84,10 @@ public class ProcessorApplication {
         JsonSerializer<TransferRequest> transferRequestJsonSerializer = new JsonSerializer<>();
         JsonDeserializer<TransferRequest> transferRequestJsonDeserializer = new JsonDeserializer<>();
         return Serdes.serdeFrom(transferRequestJsonSerializer,transferRequestJsonDeserializer);
+    }
+    @Bean
+    public Serde<TransferResponse> outputJsonSerde(){
+        return new JsonSerde<>(TransferResponse.class);
     }
     @Bean
     /**

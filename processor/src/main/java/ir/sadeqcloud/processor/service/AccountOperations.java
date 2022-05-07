@@ -41,7 +41,7 @@ public class AccountOperations {
         List<WithdrawLimitation> recentAccountWithdraws = redisDao.getAccountWithdraws(transferRequest.getAccountNo());
         WithdrawLimitation withdrawLimitation = transferRequest.buildLimitationModel();
         if (!recentAccountWithdraws.contains(withdrawLimitation))
-            throw new BusinessException("reverse transferRequset ,provided correlationId doesNot exist",transferRequest.getCorrelationId());
+            throw new BusinessException("reverse transferRequest ,provided correlationId doesNot exist",transferRequest.getCorrelationId());
         // we must get actual withdrawLimitation from redis cause our provided withdrawLimitation has amount of null
         int indexOfActualWithdrawLimitation = recentAccountWithdraws.indexOf(withdrawLimitation);
         WithdrawLimitation actualWithdrawLimitation = recentAccountWithdraws.get(indexOfActualWithdrawLimitation);
