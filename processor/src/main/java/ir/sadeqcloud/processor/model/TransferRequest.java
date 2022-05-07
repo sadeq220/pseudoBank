@@ -1,7 +1,7 @@
 package ir.sadeqcloud.processor.model;
 
 import ir.sadeqcloud.processor.exception.BusinessException;
-import ir.sadeqcloud.processor.redis.RedisLimitationKeyPrefix;
+import ir.sadeqcloud.processor.redis.LimitationKeyPrefix;
 
 import java.math.BigDecimal;
 
@@ -71,7 +71,7 @@ public class TransferRequest {
         this.bankNo = bankNo;
     }
 
-    public String getKeyIdentifier(RedisLimitationKeyPrefix keyPrefix){
+    public String getKeyIdentifier(LimitationKeyPrefix keyPrefix){
         switch (keyPrefix){
             case ACCOUNT:
                 return accountNo;

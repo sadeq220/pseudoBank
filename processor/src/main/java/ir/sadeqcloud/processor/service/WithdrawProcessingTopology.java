@@ -5,7 +5,8 @@ import ir.sadeqcloud.processor.model.RequestType;
 import ir.sadeqcloud.processor.model.ResponseStatus;
 import ir.sadeqcloud.processor.model.TransferRequest;
 import ir.sadeqcloud.processor.model.TransferResponse;
-import ir.sadeqcloud.processor.service.operations.AccountOperations;
+import ir.sadeqcloud.processor.redis.LimitationKeyPrefix;
+import ir.sadeqcloud.processor.service.operations.RedisOperations;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -18,17 +19,17 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class WithdrawProcessingTopology {
-    private AccountOperations accountOperations;
+    private RedisOperations redisOperations;
     private Serde<TransferRequest> transferRequestSerde;
     private Serde<TransferResponse> transferResponseSerde;
     private String outputTopic;
     private Serde<String> stringSerde =Serdes.String();
     @Autowired
     public WithdrawProcessingTopology(Serde<TransferRequest> transferRequestSerde,
-                                      AccountOperations accountOperations,
+                                      RedisOperations redisOperations,
                                       Serde<TransferResponse> transferResponseSerde){
         this.transferRequestSerde=transferRequestSerde;
-        this.accountOperations=accountOperations;
+        this.redisOperations = redisOperations;
         this.transferResponseSerde=transferResponseSerde;
     }
     @Bean("topologySourceNode")
@@ -48,7 +49,7 @@ public class WithdrawProcessingTopology {
         return withdrawBranch.
                 mapValues(transferRequest -> TransferResponse.builderFactory(transferRequest),Named.as("mapperToResponse"))
                 .mapValues(transferResponse -> {
-                    if (accountOperations.checkWithdrawLimitationThresholdNotPassed(transferResponse))
+                    if (redisOperations.checkWithdrawLimitationThresholdNotPassed(transferResponse, LimitationKeyPrefix.ACCOUNT))
                         return transferResponse;
                     transferResponse.addResponseStatus(ResponseStatus.FAILURE_ACCOUNT);
                     return transferResponse;
@@ -62,7 +63,7 @@ public class WithdrawProcessingTopology {
     }
     private void successfulWithdrawProcessing(KStream<String,TransferRequest> successfulTransfer){
         successfulTransfer.mapValues(transferRequest ->{
-            accountOperations.addSuccessfulWithdrawLimitation(transferRequest);// add successful withdraw to the list of Account successful withdraws
+            redisOperations.addSuccessfulWithdrawLimitation(transferRequest,LimitationKeyPrefix.ACCOUNT);// add successful withdraw to the list of Account successful withdraws
             return TransferResponse.builderFactory(transferRequest);
         })
                 .to(outputTopic,Produced.with(stringSerde,transferResponseSerde));

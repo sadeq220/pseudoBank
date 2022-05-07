@@ -34,18 +34,18 @@ public class RedisDao {
     /**
      * add string json to head of the redis list
      */
-    private void addWithdrawLimitation(RedisLimitationKeyPrefix keyPrefix,TransferRequest transferRequest,String keyIdentifier){
+    private void addWithdrawLimitation(LimitationKeyPrefix keyPrefix, TransferRequest transferRequest, String keyIdentifier){
         String withdrawLimitModelAsString = limitationJsonSerde.serializeWithdrawModel(transferRequest.buildLimitationModel());
         stringListOperations.leftPush(keyPrefix.getKeyPrefix()+keyIdentifier,withdrawLimitModelAsString);
     }
-    public void addAccountWithdrawLimitation(RedisLimitationKeyPrefix keyPrefix,TransferRequest transferRequest){
-        addWithdrawLimitation(keyPrefix,transferRequest,transferRequest.getAccountNo());
+    public void addWithdrawLimitation(LimitationKeyPrefix keyPrefix, TransferRequest transferRequest){
+        addWithdrawLimitation(keyPrefix,transferRequest,transferRequest.getKeyIdentifier(keyPrefix));
     }
 
     /**
      * -1 index represents final element
      */
-    public List<WithdrawLimitation> getWithdraws(RedisLimitationKeyPrefix keyPrefix,String keyIdentifier){
+    public List<WithdrawLimitation> getWithdraws(LimitationKeyPrefix keyPrefix, String keyIdentifier){
         List<String> withdrawAsStringList = stringListOperations.range(keyPrefix.getKeyPrefix()+ keyIdentifier, 0, -1);
         return withdrawAsStringList.stream().map(limitationJsonSerde::deserializeWithdrawModel).collect(Collectors.toList());
     }
@@ -53,7 +53,7 @@ public class RedisDao {
     /**
      * reverse on Account
      */
-    public Boolean removeWithdrawLimitation(RedisLimitationKeyPrefix keyPrefix,String keyIdentifier,WithdrawLimitation withdrawLimitation){
+    public Boolean removeWithdrawLimitation(LimitationKeyPrefix keyPrefix, String keyIdentifier, WithdrawLimitation withdrawLimitation){
         String withdrawModelAsString = limitationJsonSerde.serializeWithdrawModel(withdrawLimitation);
         Long removedElements = stringListOperations.remove(keyPrefix.getKeyPrefix() + keyIdentifier, 1, withdrawModelAsString);
         return removedElements>0;

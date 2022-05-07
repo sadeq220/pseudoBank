@@ -5,7 +5,7 @@ import ir.sadeqcloud.processor.model.RequestType;
 import ir.sadeqcloud.processor.model.TransferRequest;
 import ir.sadeqcloud.processor.model.WithdrawLimitation;
 import ir.sadeqcloud.processor.redis.RedisDao;
-import ir.sadeqcloud.processor.redis.RedisLimitationKeyPrefix;
+import ir.sadeqcloud.processor.redis.LimitationKeyPrefix;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -16,7 +16,7 @@ public abstract class AbstractRedisDataStoreOperations implements DataStoreOpera
     protected abstract RedisDao getRedisDao();
     protected abstract BigDecimal getLimitation();
 
-    public Boolean checkWithdrawLimitationThresholdNotPassed(TransferRequest transferRequest, RedisLimitationKeyPrefix keyPrefix) {
+    public Boolean checkWithdrawLimitationThresholdNotPassed(TransferRequest transferRequest, LimitationKeyPrefix keyPrefix) {
         if (!(transferRequest.getRequestType()== RequestType.PROCEED_WITHDRAW))
             throw new BusinessException("this transferRequest is not for WITHDRAW",transferRequest.getCorrelationId());
 
@@ -33,7 +33,7 @@ public abstract class AbstractRedisDataStoreOperations implements DataStoreOpera
         return getLimitation().compareTo(optionalAggregatedAmountOfWithdraws.get())>0;
     }
 
-    public void reverseWithdraw(TransferRequest transferRequest,RedisLimitationKeyPrefix keyPrefix) {
+    public void reverseWithdraw(TransferRequest transferRequest, LimitationKeyPrefix keyPrefix) {
         if (!(transferRequest.getRequestType() == RequestType.REVERSE))
             throw new BusinessException("this transferRequest in not for REVERSE ",transferRequest.getCorrelationId());
 
@@ -49,5 +49,9 @@ public abstract class AbstractRedisDataStoreOperations implements DataStoreOpera
         WithdrawLimitation actualWithdrawLimitation = recentAccountWithdraws.get(indexOfActualWithdrawLimitation);
         // delete WithdrawLimitation from redis
         getRedisDao().removeWithdrawLimitation(keyPrefix, keyIdentifier,actualWithdrawLimitation);
+    }
+
+    public void addSuccessfulWithdrawLimitation(TransferRequest transferRequest, LimitationKeyPrefix keyPrefix) {
+        getRedisDao().addWithdrawLimitation(keyPrefix,transferRequest);
     }
 }

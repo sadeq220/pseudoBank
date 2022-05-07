@@ -1,11 +1,11 @@
 package ir.sadeqcloud.processor.redis;
 
-public enum RedisLimitationKeyPrefix {
+public enum LimitationKeyPrefix {
     ACCOUNT("Account:"),
     BRANCH("Branch:"),
     BANK("Bank:");
     private String keyPrefix;
-    RedisLimitationKeyPrefix(String keyPrefix){
+    LimitationKeyPrefix(String keyPrefix){
         this.keyPrefix=keyPrefix;
     }
     public String getKeyPrefix(){
