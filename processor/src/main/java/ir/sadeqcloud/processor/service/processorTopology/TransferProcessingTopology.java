@@ -1,4 +1,4 @@
-package ir.sadeqcloud.processor.service;
+package ir.sadeqcloud.processor.service.processorTopology;
 
 import ir.sadeqcloud.processor.constants.PropertyConstants;
 import ir.sadeqcloud.processor.model.RequestType;
@@ -19,14 +19,15 @@ import org.springframework.kafka.support.KafkaStreamBrancher;
 import org.springframework.stereotype.Service;
 
 @Service
-public class WithdrawProcessingTopology {
+public class TransferProcessingTopology {
     private DataStoreOperations dataStoreOperations;
     private Serde<TransferRequest> transferRequestSerde;
     private Serde<TransferResponse> transferResponseSerde;
     private String outputTopic;
     private Serde<String> stringSerde =Serdes.String();
+
     @Autowired
-    public WithdrawProcessingTopology(Serde<TransferRequest> transferRequestSerde,
+    public TransferProcessingTopology(Serde<TransferRequest> transferRequestSerde,
                                       RedisOperations redisOperations,
                                       Serde<TransferResponse> transferResponseSerde){
         this.transferRequestSerde=transferRequestSerde;
@@ -49,24 +50,10 @@ public class WithdrawProcessingTopology {
     public KStream withdrawProcessing(KStream<String,TransferRequest> withdrawBranch){
         return withdrawBranch.
                 mapValues(transferRequest -> TransferResponse.builderFactory(transferRequest),Named.as("mapperToResponse"))
-                .mapValues(transferResponse -> {
-                    if (dataStoreOperations.checkWithdrawLimitationThresholdNotPassed(transferResponse, LimitationKeyPrefix.ACCOUNT))
-                        return transferResponse;
-                    transferResponse.addResponseStatus(ResponseStatus.FAILURE_ACCOUNT);
-                    return transferResponse;
-                },Named.as("CHECK_ACCOUNT_FAILURE"))
-                .mapValues(transferResponse -> {
-                    return transferResponse;
-                },Named.as("CHECK_BRANCH_FAILURE"));
+                .mapValues(new ThresholdLimitCheckerValueMapper(dataStoreOperations),Named.as("ThresholdLimitChecker"));
+
     }
     public void reverseProcessing(KStream<String,TransferRequest> reverseBranch){
 
-    }
-    private void successfulWithdrawProcessing(KStream<String,TransferRequest> successfulTransfer){
-        successfulTransfer.mapValues(transferRequest ->{
-            dataStoreOperations.addSuccessfulWithdrawLimitation(transferRequest,LimitationKeyPrefix.ACCOUNT);// add successful withdraw to the list of Account successful withdraws
-            return TransferResponse.builderFactory(transferRequest);
-        })
-                .to(outputTopic,Produced.with(stringSerde,transferResponseSerde));
     }
 }

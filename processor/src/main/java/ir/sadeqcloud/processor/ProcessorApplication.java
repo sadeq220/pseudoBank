@@ -25,6 +25,7 @@ import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerde;
 import org.springframework.kafka.support.serializer.JsonSerializer;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -33,6 +34,7 @@ import java.util.List;
 
 @SpringBootApplication
 @EnableKafkaStreams
+@EnableTransactionManagement
 public class ProcessorApplication {
     private final List<String> brokers;
     private final String applicationId;
@@ -45,6 +47,7 @@ public class ProcessorApplication {
     public static void main(String[] args) {
         SpringApplication.run(ProcessorApplication.class, args);
     }
+
     @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
     public KafkaStreamsConfiguration kafkaStreamsConfiguration(){
         HashMap<String, Object> kafkaStreamConfigs = new HashMap<>();
@@ -121,7 +124,7 @@ public class ProcessorApplication {
      */
     public StringRedisTemplate redisTemplate(){
         StringRedisTemplate stringRedisTemplate = new StringRedisTemplate(jedisConnectionFactory());
-        // stringRedisTemplate.setEnableTransactionSupport(true);
+        stringRedisTemplate.setEnableTransactionSupport(true);
         /**
          *  Doing so forces binding the current RedisConnection to the current Thread that is triggering MULTI
          */
