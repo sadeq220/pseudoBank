@@ -5,6 +5,7 @@ import ir.sadeqcloud.processor.model.RequestType;
 import ir.sadeqcloud.processor.model.ResponseStatus;
 import ir.sadeqcloud.processor.model.TransferRequest;
 import ir.sadeqcloud.processor.model.TransferResponse;
+import ir.sadeqcloud.processor.service.operations.AccountOperations;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -61,7 +62,7 @@ public class WithdrawProcessingTopology {
     }
     private void successfulWithdrawProcessing(KStream<String,TransferRequest> successfulTransfer){
         successfulTransfer.mapValues(transferRequest ->{
-            accountOperations.addSuccessfulWithdrawToAccountLimitation(transferRequest);// add successful withdraw to the list of Account successful withdraws
+            accountOperations.addSuccessfulWithdrawLimitation(transferRequest);// add successful withdraw to the list of Account successful withdraws
             return TransferResponse.builderFactory(transferRequest);
         })
                 .to(outputTopic,Produced.with(stringSerde,transferResponseSerde));

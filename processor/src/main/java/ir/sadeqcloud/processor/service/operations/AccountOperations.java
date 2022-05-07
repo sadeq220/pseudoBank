@@ -1,4 +1,4 @@
-package ir.sadeqcloud.processor.service;
+package ir.sadeqcloud.processor.service.operations;
 
 import ir.sadeqcloud.processor.exception.BusinessException;
 import ir.sadeqcloud.processor.model.RequestType;
@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class AccountOperations {
+public class AccountOperations implements DataStoreOperations {
     private RedisDao redisDao;
     private BigDecimal limitation;
     @Autowired
@@ -25,7 +25,7 @@ public class AccountOperations {
        if (!(transferRequest.getRequestType()==RequestType.PROCEED_WITHDRAW))
            throw new BusinessException("this transferRequest is not for WITHDRAW",transferRequest.getCorrelationId());
         WithdrawLimitation recentWithdrawLimitation = transferRequest.buildLimitationModel();
-        List<WithdrawLimitation> accountWithdraws = redisDao.getAccountWithdraws(RedisLimitationKeyPrefix.ACCOUNT,transferRequest.getAccountNo());
+        List<WithdrawLimitation> accountWithdraws = redisDao.getWithdraws(RedisLimitationKeyPrefix.ACCOUNT,transferRequest.getAccountNo());
         //add recent withdraw
         accountWithdraws.add(recentWithdrawLimitation);
 
@@ -39,7 +39,7 @@ public class AccountOperations {
     public void reverseWithdraw(TransferRequest transferRequest){
     if (!(transferRequest.getRequestType() == RequestType.REVERSE))
         throw new BusinessException("this transferRequest in not for REVERSE ",transferRequest.getCorrelationId());
-        List<WithdrawLimitation> recentAccountWithdraws = redisDao.getAccountWithdraws(RedisLimitationKeyPrefix.ACCOUNT,transferRequest.getAccountNo());
+        List<WithdrawLimitation> recentAccountWithdraws = redisDao.getWithdraws(RedisLimitationKeyPrefix.ACCOUNT,transferRequest.getAccountNo());
         WithdrawLimitation withdrawLimitation = transferRequest.buildLimitationModel();
         if (!recentAccountWithdraws.contains(withdrawLimitation))
             throw new BusinessException("reverse transferRequest ,provided correlationId doesNot exist",transferRequest.getCorrelationId());
@@ -47,10 +47,10 @@ public class AccountOperations {
         int indexOfActualWithdrawLimitation = recentAccountWithdraws.indexOf(withdrawLimitation);
         WithdrawLimitation actualWithdrawLimitation = recentAccountWithdraws.get(indexOfActualWithdrawLimitation);
         // delete WithdrawLimitation from redis
-        redisDao.removeAccountWithdrawLimitation(RedisLimitationKeyPrefix.ACCOUNT,transferRequest.getAccountNo(),actualWithdrawLimitation);
+        redisDao.removeWithdrawLimitation(RedisLimitationKeyPrefix.ACCOUNT,transferRequest.getAccountNo(),actualWithdrawLimitation);
         //TODO request gateway to do reverse on core module
     }
-    public void addSuccessfulWithdrawToAccountLimitation(TransferRequest transferRequest){
+    public void addSuccessfulWithdrawLimitation(TransferRequest transferRequest){
         redisDao.addAccountWithdrawLimitation(RedisLimitationKeyPrefix.ACCOUNT,transferRequest);
     }
 }

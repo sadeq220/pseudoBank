@@ -1,5 +1,8 @@
 package ir.sadeqcloud.processor.model;
 
+import ir.sadeqcloud.processor.exception.BusinessException;
+import ir.sadeqcloud.processor.redis.RedisLimitationKeyPrefix;
+
 import java.math.BigDecimal;
 
 public class TransferRequest {
@@ -9,6 +12,8 @@ public class TransferRequest {
     private String accountNo;
     private String correlationId;
     private RequestType requestType;
+    private String branchNo;
+    private String bankNo;
 
     public RequesterRole getRequesterRole() {
         return requesterRole;
@@ -48,6 +53,35 @@ public class TransferRequest {
 
     public void setRequestType(RequestType requestType) {
         this.requestType = requestType;
+    }
+
+    public String getBranchNo() {
+        return branchNo;
+    }
+
+    public void setBranchNo(String branchNo) {
+        this.branchNo = branchNo;
+    }
+
+    public String getBankNo() {
+        return bankNo;
+    }
+
+    public void setBankNo(String bankNo) {
+        this.bankNo = bankNo;
+    }
+
+    public String getKeyIdentifier(RedisLimitationKeyPrefix keyPrefix){
+        switch (keyPrefix){
+            case ACCOUNT:
+                return accountNo;
+            case BANK:
+                return bankNo;
+            case BRANCH:
+                return branchNo;
+            default:
+                throw new BusinessException(keyPrefix.getKeyPrefix()+"key not supported",correlationId);
+        }
     }
     public WithdrawLimitation buildLimitationModel(){
         return new WithdrawLimitation(correlationId,amount);

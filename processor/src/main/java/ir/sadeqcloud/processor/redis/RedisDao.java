@@ -45,23 +45,17 @@ public class RedisDao {
     /**
      * -1 index represents final element
      */
-    private List<WithdrawLimitation> getWithdraws(RedisLimitationKeyPrefix keyPrefix,String keyIdentifier){
+    public List<WithdrawLimitation> getWithdraws(RedisLimitationKeyPrefix keyPrefix,String keyIdentifier){
         List<String> withdrawAsStringList = stringListOperations.range(keyPrefix.getKeyPrefix()+ keyIdentifier, 0, -1);
         return withdrawAsStringList.stream().map(limitationJsonSerde::deserializeWithdrawModel).collect(Collectors.toList());
-    }
-    public List<WithdrawLimitation> getAccountWithdraws(RedisLimitationKeyPrefix keyPrefix,String accountNo){
-        return getWithdraws(keyPrefix,accountNo);
     }
 
     /**
      * reverse on Account
      */
-    private Boolean removeWithdrawLimitation(RedisLimitationKeyPrefix keyPrefix,String keyIdentifier,WithdrawLimitation withdrawLimitation){
+    public Boolean removeWithdrawLimitation(RedisLimitationKeyPrefix keyPrefix,String keyIdentifier,WithdrawLimitation withdrawLimitation){
         String withdrawModelAsString = limitationJsonSerde.serializeWithdrawModel(withdrawLimitation);
         Long removedElements = stringListOperations.remove(keyPrefix.getKeyPrefix() + keyIdentifier, 1, withdrawModelAsString);
         return removedElements>0;
-    }
-    public Boolean removeAccountWithdrawLimitation(RedisLimitationKeyPrefix keyPrefix,String accountNo,WithdrawLimitation withdrawLimitation){
-        return removeWithdrawLimitation(keyPrefix, accountNo, withdrawLimitation);
     }
 }
