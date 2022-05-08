@@ -1,5 +1,6 @@
 package ir.sadeqcloud.processor.service.processorTopology;
 
+import io.netty.util.Timeout;
 import ir.sadeqcloud.processor.constants.PropertyConstants;
 import ir.sadeqcloud.processor.exception.BusinessException;
 import ir.sadeqcloud.processor.model.LimitationKeyPrefix;
@@ -21,7 +22,7 @@ import java.util.concurrent.*;
 /**
  * create bean to populate collaborators
  */
-public class WithdrawFinalNode implements ValueMapper<TransferResponse,TransferResponse> {
+public class CoreGatewayIssueDocument implements ValueMapper<TransferResponse,TransferResponse> {
     private CoreGateway coreGateway;
     private DataStoreOperations dataStoreOperations;
     private ExecutorService executorService;// you can use spring TaskExecutor wrapper
@@ -33,9 +34,9 @@ public class WithdrawFinalNode implements ValueMapper<TransferResponse,TransferR
      * of course we can set 'Disable' state
      */
     @Autowired
-    public WithdrawFinalNode(CoreGateway coreGateway,
-                             DataStoreOperations dataStoreOperations,
-                             ExecutorService executorService){
+    public CoreGatewayIssueDocument(CoreGateway coreGateway,
+                                    DataStoreOperations dataStoreOperations,
+                                    ExecutorService executorService){
         this.coreGateway=coreGateway;
         this.dataStoreOperations=dataStoreOperations;
         this.executorService=executorService;
@@ -45,18 +46,24 @@ public class WithdrawFinalNode implements ValueMapper<TransferResponse,TransferR
     public TransferResponse apply(TransferResponse transferResponse) {
         if (!transferResponse.getResponseStatuses().isEmpty())
             return transferResponse;
-        gatewayCaller gatewayCaller = new gatewayCaller(transferResponse, coreGateway);
+        TransferResponse newTransferResponse = TransferResponse.builderFactory(transferResponse);//key rule of Functional programming
+
+        gatewayCaller gatewayCaller = new gatewayCaller(newTransferResponse, coreGateway);
         Future<TrackIssueDTO> trackIssueDTOFuture = executorService.submit(gatewayCaller);
         try {
             TrackIssueDTO trackIssueDTO = trackIssueDTOFuture.get(PropertyConstants.getTimeOutInMili(), TimeUnit.MILLISECONDS);
 
-            addLimitation(transferResponse);
+            addLimitation(newTransferResponse);
 
-            transferResponse.addResponseStatus(ResponseStatus.SUCCESS);
-            return transferResponse;
-        } catch (InterruptedException |ExecutionException| TimeoutException e) {
-            //publish failure to kafka.failure.output
-            throw new BusinessException(e.getCause().getMessage(),transferResponse.getCorrelationId());
+            newTransferResponse.addResponseStatus(ResponseStatus.SUCCESS);
+            return newTransferResponse;
+        } catch (InterruptedException |ExecutionException e) { // in case of 4xx or 5xx this block will be executed
+            newTransferResponse.addResponseStatus(ResponseStatus.FAILURE);
+            newTransferResponse.setCoreGatewayTimeout(false);
+            return newTransferResponse;
+        }catch (TimeoutException timeout){
+            newTransferResponse.setCoreGatewayTimeout(true);
+            return newTransferResponse;
         }
     }
 

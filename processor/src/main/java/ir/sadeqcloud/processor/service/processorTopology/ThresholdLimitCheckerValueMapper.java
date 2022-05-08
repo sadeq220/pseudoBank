@@ -16,14 +16,14 @@ public class ThresholdLimitCheckerValueMapper implements ValueMapper<TransferRes
     }
     @Override
     public TransferResponse apply(TransferResponse transferResponse) {
-
+        TransferResponse newTransferResponse = TransferResponse.builderFactory(transferResponse);
         if (!dataStoreOperations.checkWithdrawLimitationThresholdNotPassed(transferResponse, LimitationKeyPrefix.ACCOUNT))
-            transferResponse.addResponseStatus(ResponseStatus.FAILURE_ACCOUNT);
+            newTransferResponse.addResponseStatus(ResponseStatus.FAILURE_ACCOUNT);
         if (!dataStoreOperations.checkWithdrawLimitationThresholdNotPassed(transferResponse,LimitationKeyPrefix.BRANCH))
-            transferResponse.addResponseStatus(ResponseStatus.FAILURE_BRANCH);
+            newTransferResponse.addResponseStatus(ResponseStatus.FAILURE_BRANCH);
         if (!dataStoreOperations.checkWithdrawLimitationThresholdNotPassed(transferResponse,LimitationKeyPrefix.BANK))
-            transferResponse.addResponseStatus(ResponseStatus.FAILURE_BANK);
+            newTransferResponse.addResponseStatus(ResponseStatus.FAILURE_BANK);
 
-        return transferResponse;
+        return newTransferResponse;
     }
 }

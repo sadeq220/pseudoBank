@@ -2,10 +2,8 @@ package ir.sadeqcloud.processor.service.processorTopology;
 
 import ir.sadeqcloud.processor.constants.PropertyConstants;
 import ir.sadeqcloud.processor.model.RequestType;
-import ir.sadeqcloud.processor.model.ResponseStatus;
 import ir.sadeqcloud.processor.model.TransferRequest;
 import ir.sadeqcloud.processor.model.TransferResponse;
-import ir.sadeqcloud.processor.model.LimitationKeyPrefix;
 import ir.sadeqcloud.processor.service.operations.DataStoreOperations;
 import ir.sadeqcloud.processor.service.operations.RedisOperation.RedisOperations;
 import org.apache.kafka.common.serialization.Serde;
@@ -24,14 +22,15 @@ public class TransferProcessingTopology {
     private Serde<TransferRequest> transferRequestSerde;
     private Serde<TransferResponse> transferResponseSerde;
     private Serde<String> stringSerde =Serdes.String();
-    private WithdrawFinalNode withdrawFinalNode;
+    private CoreGatewayIssueDocument coreGatewayIssueDocument;
+    private CoreGatewayStatusChecker coreGatewayStatusChecker;
 
     @Autowired
     public TransferProcessingTopology(Serde<TransferRequest> transferRequestSerde,
                                       RedisOperations redisOperations,
                                       Serde<TransferResponse> transferResponseSerde,
-                                      WithdrawFinalNode withdrawFinalNode){
-        this.withdrawFinalNode=withdrawFinalNode;
+                                      CoreGatewayIssueDocument coreGatewayIssueDocument){
+        this.coreGatewayIssueDocument = coreGatewayIssueDocument;
         this.transferRequestSerde=transferRequestSerde;
         this.dataStoreOperations = redisOperations;
         this.transferResponseSerde=transferResponseSerde;
@@ -50,14 +49,29 @@ public class TransferProcessingTopology {
     }
 
     public void withdrawProcessing(KStream<String,TransferRequest> withdrawBranch){
-         withdrawBranch.
-                mapValues(transferRequest -> TransferResponse.builderFactory(transferRequest),Named.as("mapperToResponse"))
-                .mapValues(new ThresholdLimitCheckerValueMapper(dataStoreOperations),Named.as("ThresholdLimitChecker"))
-                .mapValues(withdrawFinalNode,Named.as("gatewayCaller"))
-                .to(PropertyConstants.getNormalOutputTopic(),Produced.with(stringSerde,transferResponseSerde));
+        KStream<String, TransferResponse> successOrNeedsRetryKStream = withdrawBranch.
+                mapValues(transferRequest -> TransferResponse.builderFactory(transferRequest), Named.as("map-to-response"))
+                .mapValues(new ThresholdLimitCheckerValueMapper(dataStoreOperations), Named.as("threshold-limit-checker"))
+                .mapValues(coreGatewayIssueDocument,Named.as("issue-document"));
+
+        successOrNeedsRetryKStream.
+                split(Named.as("failure-checker"))
+                .branch((s, transferResponse) -> transferResponse.getCoreGatewayTimeout(),Branched.withConsumer(ks->retryOnCoreGatewayTimeout(ks)))
+                .defaultBranch(Branched.withConsumer(ks->withdrawFinished(ks)));
 
     }
     public void reverseProcessing(KStream<String,TransferRequest> reverseBranch){
 
+    }
+
+    private void retryOnCoreGatewayTimeout(KStream<String,TransferResponse> kStream){
+    kStream.mapValues(coreGatewayStatusChecker)
+            .split(Named.as("retry-node"))
+            .branch((s, transferResponse) -> transferResponse.getCoreGatewayTimeout(),Branched.withConsumer(ks->retryOnCoreGatewayTimeout(ks)))
+            .defaultBranch(Branched.withConsumer(ks->withdrawFinished(ks)));
+    }
+
+    private void withdrawFinished(KStream<String,TransferResponse> kStream){
+        kStream.to(PropertyConstants.getNormalOutputTopic(),Produced.with(stringSerde,transferResponseSerde));
     }
 }
