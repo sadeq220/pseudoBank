@@ -37,6 +37,8 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @SpringBootApplication
 @EnableKafkaStreams
@@ -158,5 +160,9 @@ public class ProcessorApplication {
     @Bean
     public RestTemplate restTemplate(){
         return new RestTemplate();
+    }
+    @Bean
+    public ExecutorService concurrentExecutor(){
+        return Executors.newFixedThreadPool(10);
     }
 }

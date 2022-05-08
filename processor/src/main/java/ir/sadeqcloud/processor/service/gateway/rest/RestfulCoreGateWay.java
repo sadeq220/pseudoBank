@@ -1,13 +1,15 @@
 package ir.sadeqcloud.processor.service.gateway.rest;
 
+import ir.sadeqcloud.processor.constants.PropertyConstants;
 import ir.sadeqcloud.processor.service.gateway.CoreGateway;
 import ir.sadeqcloud.processor.service.gateway.dto.IssueRequest;
 import ir.sadeqcloud.processor.service.gateway.dto.TrackIssueDTO;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponents;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 public class RestfulCoreGateWay implements CoreGateway {
@@ -24,7 +26,10 @@ public class RestfulCoreGateWay implements CoreGateway {
     @Override
     public TrackIssueDTO issueDocument(IssueRequest issueRequest) {
         HttpHeaders httpHeaders = defaultHttpHeaders(issueRequest.getCorrelationId());
-        return null;
+        UriComponents uriComponents = UriComponentsBuilder.fromHttpUrl(PropertyConstants.getCoreBankAddress()).build();
+        RequestEntity requestEntity = new RequestEntity(issueRequest, httpHeaders , HttpMethod.PUT , uriComponents.toUri());
+        ResponseEntity<TrackIssueDTO> responseEntity = restTemplate.exchange(requestEntity, TrackIssueDTO.class);
+        return responseEntity.getBody();
     }
 
     @Override
