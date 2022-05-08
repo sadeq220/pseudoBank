@@ -23,7 +23,6 @@ import java.util.concurrent.*;
  */
 public class WithdrawFinalNode implements ValueMapper<TransferResponse,TransferResponse> {
     private CoreGateway coreGateway;
-    private RedisDao redisDao;
     private DataStoreOperations dataStoreOperations;
     private ExecutorService executorService;// you can use spring TaskExecutor wrapper
 
@@ -79,13 +78,13 @@ public class WithdrawFinalNode implements ValueMapper<TransferResponse,TransferR
 
     private void addLimitation(TransferRequest transferRequest){
         try {
-            redisDao.addWithdrawLimitation(LimitationKeyPrefix.ACCOUNT, transferRequest);
-            redisDao.addWithdrawLimitation(LimitationKeyPrefix.BRANCH, transferRequest);
-            redisDao.addWithdrawLimitation(LimitationKeyPrefix.BANK, transferRequest);
+            dataStoreOperations.addSuccessfulWithdrawLimitation(transferRequest,LimitationKeyPrefix.ACCOUNT);
+            dataStoreOperations.addSuccessfulWithdrawLimitation(transferRequest,LimitationKeyPrefix.BRANCH);
+            dataStoreOperations.addSuccessfulWithdrawLimitation(transferRequest,LimitationKeyPrefix.BANK);
         }catch (Exception e){
             e.printStackTrace();
             /**
-             * don't care if redis operations go crazy
+             * don't care if dataStore operations go crazy
              */
         }
     }
