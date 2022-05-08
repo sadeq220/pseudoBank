@@ -1,13 +1,10 @@
 package ir.sadeqcloud.processor.service.processorTopology;
 
-import io.netty.util.Timeout;
 import ir.sadeqcloud.processor.constants.PropertyConstants;
-import ir.sadeqcloud.processor.exception.BusinessException;
 import ir.sadeqcloud.processor.model.LimitationKeyPrefix;
 import ir.sadeqcloud.processor.model.ResponseStatus;
 import ir.sadeqcloud.processor.model.TransferRequest;
 import ir.sadeqcloud.processor.model.TransferResponse;
-import ir.sadeqcloud.processor.redis.RedisDao;
 import ir.sadeqcloud.processor.service.gateway.CoreGateway;
 import ir.sadeqcloud.processor.service.gateway.dto.IssueRequest;
 import ir.sadeqcloud.processor.service.gateway.dto.TrackIssueDTO;
@@ -48,7 +45,7 @@ public class CoreGatewayIssueDocument implements ValueMapper<TransferResponse,Tr
             return transferResponse;
         TransferResponse newTransferResponse = TransferResponse.builderFactory(transferResponse);//key rule of Functional programming
 
-        gatewayCaller gatewayCaller = new gatewayCaller(newTransferResponse, coreGateway);
+        GatewayCaller gatewayCaller = new GatewayCaller(newTransferResponse, coreGateway);
         Future<TrackIssueDTO> trackIssueDTOFuture = executorService.submit(gatewayCaller);
         try {
             TrackIssueDTO trackIssueDTO = trackIssueDTOFuture.get(PropertyConstants.getTimeOutInMili(), TimeUnit.MILLISECONDS);
@@ -67,10 +64,10 @@ public class CoreGatewayIssueDocument implements ValueMapper<TransferResponse,Tr
         }
     }
 
-    private class gatewayCaller implements Callable<TrackIssueDTO>{
+    private class GatewayCaller implements Callable<TrackIssueDTO>{
         private TransferRequest transferRequest;
         private CoreGateway coreGateway;
-        public gatewayCaller(TransferRequest transferRequest,
+        public GatewayCaller(TransferRequest transferRequest,
                              CoreGateway coreGateway){
             this.transferRequest=transferRequest;
             this.coreGateway=coreGateway;

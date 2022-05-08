@@ -5,7 +5,6 @@ import ir.sadeqcloud.processor.model.ResponseStatus;
 import ir.sadeqcloud.processor.model.TransferRequest;
 import ir.sadeqcloud.processor.model.TransferResponse;
 import ir.sadeqcloud.processor.service.gateway.CoreGateway;
-import ir.sadeqcloud.processor.service.gateway.dto.IssueRequest;
 import ir.sadeqcloud.processor.service.gateway.dto.TrackIssueDTO;
 import org.apache.kafka.streams.kstream.ValueMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +27,11 @@ public class CoreGatewayStatusChecker implements ValueMapper<TransferResponse,Tr
         if (transferResponse==null)
         return null;
         TransferResponse newTransferResponse = TransferResponse.builderFactory(transferResponse);//key rule of Functional programming
+        if (newTransferResponse.getTimesOnRetry()>PropertyConstants.getMaxRetryOnCoreGatewayTimeout()){ // set max retries
+            newTransferResponse.setCoreGatewayTimeout(false);
+            newTransferResponse.addResponseStatus(ResponseStatus.FAILURE);
+            return newTransferResponse;
+        }
         GatewayCaller gatewayCaller = new GatewayCaller(newTransferResponse, coreGateway);
         Future<TrackIssueDTO> trackIssueDTOFuture = executorService.submit(gatewayCaller);
         try {
