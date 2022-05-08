@@ -23,13 +23,15 @@ public class TransferProcessingTopology {
     private DataStoreOperations dataStoreOperations;
     private Serde<TransferRequest> transferRequestSerde;
     private Serde<TransferResponse> transferResponseSerde;
-    private String outputTopic;
     private Serde<String> stringSerde =Serdes.String();
+    private WithdrawFinalNode withdrawFinalNode;
 
     @Autowired
     public TransferProcessingTopology(Serde<TransferRequest> transferRequestSerde,
                                       RedisOperations redisOperations,
-                                      Serde<TransferResponse> transferResponseSerde){
+                                      Serde<TransferResponse> transferResponseSerde,
+                                      WithdrawFinalNode withdrawFinalNode){
+        this.withdrawFinalNode=withdrawFinalNode;
         this.transferRequestSerde=transferRequestSerde;
         this.dataStoreOperations = redisOperations;
         this.transferResponseSerde=transferResponseSerde;
@@ -47,10 +49,12 @@ public class TransferProcessingTopology {
                  onTopOf(sourceNode);
     }
 
-    public KStream withdrawProcessing(KStream<String,TransferRequest> withdrawBranch){
-        return withdrawBranch.
+    public void withdrawProcessing(KStream<String,TransferRequest> withdrawBranch){
+         withdrawBranch.
                 mapValues(transferRequest -> TransferResponse.builderFactory(transferRequest),Named.as("mapperToResponse"))
-                .mapValues(new ThresholdLimitCheckerValueMapper(dataStoreOperations),Named.as("ThresholdLimitChecker"));
+                .mapValues(new ThresholdLimitCheckerValueMapper(dataStoreOperations),Named.as("ThresholdLimitChecker"))
+                .mapValues(withdrawFinalNode,Named.as("gatewayCaller"))
+                .to(PropertyConstants.getNormalOutputTopic(),Produced.with(stringSerde,transferResponseSerde));
 
     }
     public void reverseProcessing(KStream<String,TransferRequest> reverseBranch){

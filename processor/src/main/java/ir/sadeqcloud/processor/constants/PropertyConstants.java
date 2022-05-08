@@ -8,12 +8,15 @@ public class PropertyConstants {
     private static String inputTopic;
     private static String coreBankAddress;
     private static Long timeOutInMili;
+    private static String normalOutputTopic;
     public PropertyConstants(@Value("${kafka.input.topic}")String inputTopic,
                              @Value("${core.bank.address}")String coreBankAddress,
-                             @Value("${time.out.in.mili}")Long timeOutInMili){
+                             @Value("${time.out.in.mili}")Long timeOutInMili,
+                             @Value("kafka.normal.outptu")String normalOutputTopic){
         PropertyConstants.inputTopic=inputTopic;
         PropertyConstants.coreBankAddress=coreBankAddress;
         PropertyConstants.timeOutInMili=timeOutInMili;
+        PropertyConstants.normalOutputTopic=normalOutputTopic;
     }
     public static String getInputTopic(){
         return inputTopic;
@@ -24,5 +27,8 @@ public class PropertyConstants {
 
     public static Long getTimeOutInMili(){
         return timeOutInMili;
+    }
+    public static String getNormalOutputTopic(){
+        return normalOutputTopic;
     }
 }
