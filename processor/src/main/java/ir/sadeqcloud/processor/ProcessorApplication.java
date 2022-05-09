@@ -3,6 +3,8 @@ package ir.sadeqcloud.processor;
 import ir.sadeqcloud.processor.config.KafkaStreamInfrastructureConfig;
 import ir.sadeqcloud.processor.model.TransferRequest;
 import ir.sadeqcloud.processor.model.TransferResponse;
+import ir.sadeqcloud.processor.util.kafkaSerde.StringBuilderKafkaDeserializer;
+import ir.sadeqcloud.processor.util.kafkaSerde.StringBuilderKafkaSerializer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -101,6 +103,12 @@ public class ProcessorApplication {
     @Bean
     public Serde<TransferResponse> outputJsonSerde(){
         return new JsonSerde<>(TransferResponse.class);
+    }
+    @Bean
+    public Serde<StringBuilder> stringBuilderSerde(){
+        StringBuilderKafkaSerializer stringBuilderKafkaSerializer = new StringBuilderKafkaSerializer();
+        StringBuilderKafkaDeserializer stringBuilderKafkaDeserializer = new StringBuilderKafkaDeserializer();
+        return Serdes.serdeFrom(stringBuilderKafkaSerializer,stringBuilderKafkaDeserializer);
     }
     @Bean
     /**

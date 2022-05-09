@@ -8,8 +8,10 @@ import ir.sadeqcloud.processor.service.operations.DataStoreOperations;
 import ir.sadeqcloud.processor.service.operations.RedisOperation.RedisOperations;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.state.KeyValueStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -22,9 +24,10 @@ public class TransferProcessingTopology {
     private Serde<TransferRequest> transferRequestSerde;
     private Serde<TransferResponse> transferResponseSerde;
     private Serde<String> stringSerde =Serdes.String();
+    private Serde<StringBuilder> stringBuilderSerde;//TODO populate
     private CoreGatewayIssueDocument coreGatewayIssueDocument;
     private CoreGatewayStatusChecker coreGatewayStatusChecker;
-    private CoreGatewayReverseIssue coreGatewayReverseIssue;
+    private CoreGatewayReverseIssue coreGatewayReverseIssue;//TODO populate
 
     @Autowired
     public TransferProcessingTopology(Serde<TransferRequest> transferRequestSerde,
@@ -86,5 +89,18 @@ public class TransferProcessingTopology {
 
     private void withdrawFinished(KStream<String,TransferResponse> kStream){
         kStream.to(PropertyConstants.getNormalOutputTopic(),Produced.with(stringSerde,transferResponseSerde));
+        kStream.filter((s, transferResponse) -> transferResponse.getRequestType()!=RequestType.REVERSE)
+                .mapValues(transferResponse -> TransferResponse.buildNotification(transferResponse))
+                .groupByKey()//group by accountNo
+                .aggregate(()->new StringBuilder()
+                           ,(k,v,VA)->{VA.append("\n");return VA.append(v);}
+                           , materializedStateStoreForNotification());
+    }
+    private Materialized<String,StringBuilder, KeyValueStore<Bytes,byte[]>> materializedStateStoreForNotification(){
+        Materialized<String, StringBuilder, KeyValueStore<Bytes,byte[]>> notificationSerde = Materialized.as("notificationSerde");
+        notificationSerde.withKeySerde(stringSerde);
+        notificationSerde.withValueSerde(stringBuilderSerde);
+        notificationSerde.withCachingEnabled();
+        return notificationSerde;
     }
 }
