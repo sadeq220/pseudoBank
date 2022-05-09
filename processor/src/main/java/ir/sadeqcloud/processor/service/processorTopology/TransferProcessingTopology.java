@@ -95,7 +95,7 @@ public class TransferProcessingTopology {
         kStream.filter((s, transferResponse) -> transferResponse.getRequestType()!=RequestType.REVERSE)
                 .mapValues(transferResponse -> TransferResponse.buildNotification(transferResponse))
                 .groupByKey()//group by accountNo
-                .windowedBy(SessionWindows.ofInactivityGapWithNoGrace(Duration.ofMillis(1_000)))
+                .windowedBy(SessionWindows.ofInactivityGapWithNoGrace(Duration.ofMillis(1_000)))//no grace means out-of-order records ignored , so consider the record orders
                 /**
                  * SessionWindowedKStream is an abstraction of a windowed record stream of KeyValue pairs.
                  * It is an intermediate representation after a grouping and windowing of a KStream
@@ -109,6 +109,9 @@ public class TransferProcessingTopology {
         /**
          *  The result is written into a local SessionStore (which is basically an ever-updating materialized view).
          *  Furthermore, updates to the store are sent downstream into a KTable changelog stream.
+         *
+         *  SessionStore Interface for storing the aggregated values of sessions.
+         * The key is internally represented as Windowed<K> that comprises the plain key and the Window that represents window start- and end-timestamp.
          */
     }
 
