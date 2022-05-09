@@ -12,11 +12,14 @@ import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.SessionStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.support.KafkaStreamBrancher;
 import org.springframework.stereotype.Service;
+
+import java.time.Duration;
 
 @Service
 public class TransferProcessingTopology {
@@ -92,15 +95,28 @@ public class TransferProcessingTopology {
         kStream.filter((s, transferResponse) -> transferResponse.getRequestType()!=RequestType.REVERSE)
                 .mapValues(transferResponse -> TransferResponse.buildNotification(transferResponse))
                 .groupByKey()//group by accountNo
+                .windowedBy(SessionWindows.ofInactivityGapWithNoGrace(Duration.ofMillis(1_000)))
+                /**
+                 * SessionWindowedKStream is an abstraction of a windowed record stream of KeyValue pairs.
+                 * It is an intermediate representation after a grouping and windowing of a KStream
+                 * before an aggregation is applied to the new (partitioned) windows resulting in a windowed KTable
+                 * (a windowed KTable is a KTable with key type Windowed KTable<Windowed<K>,VR>).
+                 */
                 .aggregate(()->new StringBuilder()
                            ,(k,v,VA)->{VA.append("\n");return VA.append(v);}
+                           , (s, VA1, VA2) ->{VA1.append("\n");return VA1.append(VA2);}//merger , merge two sessions into one , in case of two session merge caused by out-of-order record arrival
                            , materializedStateStoreForNotification());
+        /**
+         *  The result is written into a local SessionStore (which is basically an ever-updating materialized view).
+         *  Furthermore, updates to the store are sent downstream into a KTable changelog stream.
+         */
     }
-    private Materialized<String,StringBuilder, KeyValueStore<Bytes,byte[]>> materializedStateStoreForNotification(){
-        Materialized<String, StringBuilder, KeyValueStore<Bytes,byte[]>> notificationSerde = Materialized.as("notificationSerde");
+
+    private Materialized<String,StringBuilder, SessionStore<Bytes,byte[]>> materializedStateStoreForNotification(){
+        Materialized<String, StringBuilder, SessionStore<Bytes,byte[]>> notificationSerde = Materialized.as("notificationSerde");
         notificationSerde.withKeySerde(stringSerde);
         notificationSerde.withValueSerde(stringBuilderSerde);
-        notificationSerde.withCachingEnabled();
+        notificationSerde.withCachingEnabled(); //in-memory cache, cause record compaction
         return notificationSerde;
     }
 }
