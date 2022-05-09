@@ -8,7 +8,7 @@ import ir.sadeqcloud.processor.service.gateway.dto.TrackIssueDTO;
  * it could be implemented with multiple protocols
  */
 public interface CoreGateway {
-    void reverseWithdraw();
+    TrackIssueDTO reverseWithdraw(String trackNo);
     TrackIssueDTO issueDocument(IssueRequest issueRequest);
     TrackIssueDTO trackStatus(String trackNo);
 }

@@ -18,15 +18,29 @@ public class RestfulCoreGateWay implements CoreGateway {
     public RestfulCoreGateWay(RestTemplate restTemplate){
         this.restTemplate=restTemplate;
     }
-    @Override
-    public void reverseWithdraw() {
 
+    @Override
+    public TrackIssueDTO reverseWithdraw(String trackNo) {
+        HttpHeaders httpHeaders = defaultHttpHeaders(trackNo);
+        UriComponents uriComponents = UriComponentsBuilder.newInstance()
+                .scheme("http")
+                .host(PropertyConstants.getCoreBankAddress())
+                .path("/reverse/document")
+                .queryParam("trackNo",trackNo)
+                .build();
+        RequestEntity requestEntity = new RequestEntity(httpHeaders , HttpMethod.PUT , uriComponents.toUri());
+        ResponseEntity<TrackIssueDTO> responseEntity = restTemplate.exchange(requestEntity, TrackIssueDTO.class);
+        return responseEntity.getBody();
     }
 
     @Override
     public TrackIssueDTO issueDocument(IssueRequest issueRequest) {
         HttpHeaders httpHeaders = defaultHttpHeaders(issueRequest.getCorrelationId());
-        UriComponents uriComponents = UriComponentsBuilder.fromHttpUrl(PropertyConstants.getCoreBankAddress()).build();
+        UriComponents uriComponents = UriComponentsBuilder.newInstance()
+                .scheme("http")
+                .host(PropertyConstants.getCoreBankAddress())
+                .path("/issueRequest")
+                .build();
         RequestEntity requestEntity = new RequestEntity(issueRequest, httpHeaders , HttpMethod.PUT , uriComponents.toUri());
         ResponseEntity<TrackIssueDTO> responseEntity = restTemplate.exchange(requestEntity, TrackIssueDTO.class);
         return responseEntity.getBody();
