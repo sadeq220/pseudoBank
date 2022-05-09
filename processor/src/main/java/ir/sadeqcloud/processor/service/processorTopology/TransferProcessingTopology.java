@@ -24,13 +24,16 @@ public class TransferProcessingTopology {
     private Serde<String> stringSerde =Serdes.String();
     private CoreGatewayIssueDocument coreGatewayIssueDocument;
     private CoreGatewayStatusChecker coreGatewayStatusChecker;
+    private CoreGatewayReverseIssue coreGatewayReverseIssue;
 
     @Autowired
     public TransferProcessingTopology(Serde<TransferRequest> transferRequestSerde,
                                       RedisOperations redisOperations,
                                       Serde<TransferResponse> transferResponseSerde,
-                                      CoreGatewayIssueDocument coreGatewayIssueDocument){
+                                      CoreGatewayIssueDocument coreGatewayIssueDocument,
+                                      CoreGatewayStatusChecker coreGatewayStatusChecker){
         this.coreGatewayIssueDocument = coreGatewayIssueDocument;
+        this.coreGatewayStatusChecker=coreGatewayStatusChecker;
         this.transferRequestSerde=transferRequestSerde;
         this.dataStoreOperations = redisOperations;
         this.transferResponseSerde=transferResponseSerde;
@@ -61,9 +64,19 @@ public class TransferProcessingTopology {
 
     }
     public void reverseProcessing(KStream<String,TransferRequest> reverseBranch){
+        reverseBranch.mapValues(transferRequest -> TransferResponse.builderFactory(transferRequest),Named.as("map-to-response"))
+                     .mapValues(coreGatewayReverseIssue,Named.as("reverse-issue"))
+                        .split(Named.as("failure-checker"))
+                            .branch((s, transferResponse) -> transferResponse.getCoreGatewayTimeout(),Branched.withConsumer(ks->retryOnCoreGatewayTimeout(ks)))
+                            .defaultBranch(Branched.withConsumer(ks->withdrawFinished(ks)));
 
     }
 
+    /**
+     * the retry mechanism takes time based on req timeout and number of retries
+     * so consider to config the poll.max.interval.ms property
+     * to not kick-out of consumer-group
+     */
     private void retryOnCoreGatewayTimeout(KStream<String,TransferResponse> kStream){
     kStream.mapValues(coreGatewayStatusChecker)
             .split(Named.as("retry-node"))

@@ -48,7 +48,16 @@ public class RestfulCoreGateWay implements CoreGateway {
 
     @Override
     public TrackIssueDTO trackStatus(String trackNo) {
-        return null;
+        HttpHeaders httpHeaders = defaultHttpHeaders(trackNo);
+        UriComponents uriComponents = UriComponentsBuilder.newInstance()
+                .scheme("http")
+                .host(PropertyConstants.getCoreBankAddress())
+                .path("/track/status")
+                .queryParam("trackNo",trackNo)
+                .build();
+        RequestEntity requestEntity = new RequestEntity(httpHeaders , HttpMethod.GET , uriComponents.toUri());
+        ResponseEntity<TrackIssueDTO> responseEntity = restTemplate.exchange(requestEntity, TrackIssueDTO.class);
+        return responseEntity.getBody();
     }
     private HttpHeaders defaultHttpHeaders(String correlationId){
         HttpHeaders httpHeaders = new HttpHeaders();

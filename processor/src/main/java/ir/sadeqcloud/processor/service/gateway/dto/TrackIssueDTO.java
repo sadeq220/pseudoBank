@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 public class TrackIssueDTO {
 
     private String trackNo;
+    private Boolean reversed;
 
     public String getTrackNo() {
         return trackNo;
@@ -13,5 +14,13 @@ public class TrackIssueDTO {
 
     public void setTrackNo(String trackNo) {
         this.trackNo = trackNo;
+    }
+
+    public Boolean getReversed() {
+        return reversed;
+    }
+
+    public void setReversed(Boolean reversed) {
+        this.reversed = reversed;
     }
 }

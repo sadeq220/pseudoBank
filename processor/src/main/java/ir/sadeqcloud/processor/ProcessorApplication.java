@@ -3,6 +3,7 @@ package ir.sadeqcloud.processor;
 import ir.sadeqcloud.processor.config.KafkaStreamInfrastructureConfig;
 import ir.sadeqcloud.processor.model.TransferRequest;
 import ir.sadeqcloud.processor.model.TransferResponse;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -72,6 +73,7 @@ public class ProcessorApplication {
         kafkaStreamConfigs.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG,10_000);//define KTable cache interval flush
         kafkaStreamConfigs.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG,1);//default one , use more when subscribing to 2 or more partitions ,for parallelism.
         kafkaStreamConfigs.put(StreamsConfig.METRICS_RECORDING_LEVEL_CONFIG,"TRACE");
+        kafkaStreamConfigs.put("consumer."+ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG,15_000);
         return new KafkaStreamsConfiguration(kafkaStreamConfigs);
     }
     @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_BUILDER_BEAN_NAME)
