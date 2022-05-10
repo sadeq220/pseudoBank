@@ -1,8 +1,10 @@
 package ir.sadeqcloud.gateway.controller;
 
+import ir.sadeqcloud.gateway.awareClasses.IoCContainerUtil;
 import ir.sadeqcloud.gateway.controller.dto.ReverseDTO;
 import ir.sadeqcloud.gateway.controller.dto.WithdrawTransferDTO;
 import ir.sadeqcloud.gateway.service.PublishTransferRequest;
+import ir.sadeqcloud.gateway.sharedResource.IntermediaryObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,6 +23,9 @@ public class TrRqController {
     @PostMapping("transfer/withdraw")
     public ResponseEntity processWithdraw(@RequestBody WithdrawTransferDTO withdrawTransferDTO){
         publishTransferRequest.publishTransferMessage(withdrawTransferDTO.buildModel());
+        //create spring bean with custom name
+        IoCContainerUtil.registerBean(withdrawTransferDTO.getCorrelationId(),withdrawTransferDTO.getAccountNo(),withdrawTransferDTO.getCorrelationId());
+        IoCContainerUtil.getBean(IntermediaryObject.class,withdrawTransferDTO.getCorrelationId());
         return ResponseEntity.ok(null);
     }
     @PostMapping("transfer/reverse")
