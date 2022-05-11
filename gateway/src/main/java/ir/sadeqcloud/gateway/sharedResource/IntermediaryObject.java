@@ -25,6 +25,9 @@ public class IntermediaryObject {
         return accountNo;
     }
 
+    /**
+     * setter used by BeanDefinitionRegistry
+     */
     public void setAccountNo(String accountNo) {
         this.accountNo = accountNo;
     }
@@ -45,13 +48,15 @@ public class IntermediaryObject {
     }
     public ClientResponse processTransferResponse(){
         try {
-            TransferResponse transferResponseByKafkaConsumer = blockingQueue.poll(3_000, TimeUnit.MILLISECONDS);
+            TransferResponse transferResponseByKafkaConsumer = blockingQueue.poll(5_000, TimeUnit.MILLISECONDS);
+            if (transferResponseByKafkaConsumer==null) // Timeout happened
+                throw new ClientResponseException("Timeout happened,result not determined.check later the status of your CorrelationId:"+correlationId);
             ResponseStatus[] responseStatuses = transferResponseByKafkaConsumer.getResponseStatuses().toArray(new ResponseStatus[]{});
             if (responseStatuses.length == 1 && responseStatuses[0]== ResponseStatus.SUCCESS)
                 return new ClientSuccessfulResponse(correlationId,accountNo);
             return new ClientFailureResponse(correlationId,accountNo,responseStatuses);
         } catch (InterruptedException e) {
-        throw new ClientResponseException("result not determined.check the status of your CorrelationId:"+correlationId );
+        throw new ClientResponseException("result not determined.check later the status of your CorrelationId:"+correlationId );
         }
     }
 }
