@@ -11,6 +11,8 @@ public class WithdrawTransferDTO {
     private String correlationId;
     private RequesterRole requesterRole;
     private BigDecimal amount;
+    private String branchNo;
+    private String bankNo;
 
     public String getAccountNo() {
         return accountNo;
@@ -43,6 +45,23 @@ public class WithdrawTransferDTO {
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }
+
+    public String getBranchNo() {
+        return branchNo;
+    }
+
+    public void setBranchNo(String branchNo) {
+        this.branchNo = branchNo;
+    }
+
+    public String getBankNo() {
+        return bankNo;
+    }
+
+    public void setBankNo(String bankNo) {
+        this.bankNo = bankNo;
+    }
+
     public TransferRequest buildModel(){
         TransferRequest transferRequest = new TransferRequest();
         transferRequest.setRequestType(RequestType.PROCEED_WITHDRAW);
@@ -50,6 +69,8 @@ public class WithdrawTransferDTO {
         transferRequest.setCorrelationId(correlationId);
         transferRequest.setAmount(amount);
         transferRequest.setRequesterRole(requesterRole);
+        transferRequest.setBankNo(bankNo);
+        transferRequest.setBranchNo(branchNo);
         return transferRequest;
     }
 }
