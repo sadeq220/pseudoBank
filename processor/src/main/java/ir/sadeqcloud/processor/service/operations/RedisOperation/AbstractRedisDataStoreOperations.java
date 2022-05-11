@@ -15,7 +15,7 @@ import java.util.Optional;
 public abstract class AbstractRedisDataStoreOperations implements DataStoreOperations {
 
     protected abstract RedisDao getRedisDao();
-    protected abstract BigDecimal getLimitation();
+    protected abstract BigDecimal getLimitation(LimitationKeyPrefix keyPrefix);
 
     public Boolean checkWithdrawLimitationThresholdNotPassed(TransferRequest transferRequest, LimitationKeyPrefix keyPrefix) {
         if (!(transferRequest.getRequestType()== RequestType.PROCEED_WITHDRAW))
@@ -31,7 +31,7 @@ public abstract class AbstractRedisDataStoreOperations implements DataStoreOpera
         if (!optionalAggregatedAmountOfWithdraws.isPresent())
             return true;
         // if limitation > aggregatedAmountOfWithdraws return true
-        return getLimitation().compareTo(optionalAggregatedAmountOfWithdraws.get())>0;
+        return getLimitation(keyPrefix).compareTo(optionalAggregatedAmountOfWithdraws.get())>0;
     }
 
     public void reverseWithdraw(TransferRequest transferRequest, LimitationKeyPrefix keyPrefix) {

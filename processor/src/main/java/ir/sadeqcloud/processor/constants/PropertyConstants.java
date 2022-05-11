@@ -13,8 +13,8 @@ public class PropertyConstants {
     public PropertyConstants(@Value("${kafka.input.topic}")String inputTopic,
                              @Value("${core.bank.address}")String coreBankAddress,
                              @Value("${time.out.in.mili}")Long timeOutInMili,
-                             @Value("kafka.normal.outptu")String normalOutputTopic,
-                             @Value("max.retry.on.core.gateway.timeout")Integer maxRetryOnCoreGatewayTimeout){
+                             @Value("${kafka.normal.output}")String normalOutputTopic,
+                             @Value("${max.retry.on.core.gateway.timeout}")Integer maxRetryOnCoreGatewayTimeout){
         PropertyConstants.inputTopic=inputTopic;
         PropertyConstants.coreBankAddress=coreBankAddress;
         PropertyConstants.timeOutInMili=timeOutInMili;

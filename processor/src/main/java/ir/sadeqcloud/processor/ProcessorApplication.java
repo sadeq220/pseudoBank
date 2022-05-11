@@ -8,8 +8,11 @@ import ir.sadeqcloud.processor.util.kafkaSerde.StringBuilderKafkaSerializer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.state.SessionStore;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
@@ -44,7 +47,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @SpringBootApplication
-@EnableKafkaStreams
+// @EnableKafkaStreams
 @EnableTransactionManagement
 public class ProcessorApplication {
     private final List<String> brokers;
@@ -59,7 +62,7 @@ public class ProcessorApplication {
         SpringApplication.run(ProcessorApplication.class, args);
     }
 
-    @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
+    @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)//TODO set the default.deserialization.exception.handler
     public KafkaStreamsConfiguration kafkaStreamsConfiguration(){
         HashMap<String, Object> kafkaStreamConfigs = new HashMap<>();
         kafkaStreamConfigs.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG,brokers);//mandatory
@@ -91,6 +94,15 @@ public class ProcessorApplication {
         streamsBuilderFactoryBean.setInfrastructureCustomizer(new KafkaStreamInfrastructureConfig());// to add state store to streamsBuilder
         return streamsBuilderFactoryBean;
     }
+    @Bean
+    public Materialized<String,StringBuilder, SessionStore<Bytes,byte[]>> materializedStateStoreForNotification(){
+        Materialized<String, StringBuilder, SessionStore<Bytes,byte[]>> notificationSerde = Materialized.as("notificationSerde");
+        notificationSerde.withKeySerde(Serdes.String());
+        notificationSerde.withValueSerde(stringBuilderSerde());
+        notificationSerde.withCachingEnabled(); //in-memory cache, cause record compaction
+        return notificationSerde;
+    }
+
     @Bean
     /**
      * TODO return new JsonSerde<TransformRequest>();
