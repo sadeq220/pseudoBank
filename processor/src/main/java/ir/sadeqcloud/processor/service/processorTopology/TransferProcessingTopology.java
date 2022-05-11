@@ -21,6 +21,7 @@ import org.springframework.kafka.support.KafkaStreamBrancher;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -81,8 +82,8 @@ public class TransferProcessingTopology {
 
         successOrNeedsRetryKStream.
                 split(Named.as("failure-checker-withdraw"))
-                .branch((s, transferResponse) -> transferResponse.getCoreGatewayTimeout(),Branched.withConsumer(ks->splattedKStream.put("timeout",ks)))
-                .defaultBranch(Branched.withConsumer(ks->splattedKStream.put("final",ks)));
+                .branch((s, transferResponse) -> transferResponse.getCoreGatewayTimeout(),Branched.withConsumer(ks->splattedKStream.put("timeout",ks),"_withdraw-timeout"))
+                .defaultBranch(Branched.withConsumer(ks->splattedKStream.put("final",ks),"_successful-withdraw"));
         return splattedKStream;
     }
     @Bean(name = "reverseProcessing")
@@ -92,8 +93,8 @@ public class TransferProcessingTopology {
         reverseBranch.mapValues(transferRequest -> TransferResponse.builderFactory(transferRequest),Named.as("map-to-response-reverse"))
                      .mapValues(coreGatewayReverseIssue,Named.as("reverse-issue"))
                         .split(Named.as("failure-checker-reverse"))
-                            .branch((s, transferResponse) -> transferResponse.getCoreGatewayTimeout(),Branched.withConsumer(ks->splattedKStream.put("timeout",ks)))
-                            .defaultBranch(Branched.withConsumer(ks->splattedKStream.put("final",ks)));
+                            .branch((s, transferResponse) -> transferResponse.getCoreGatewayTimeout(),Branched.withConsumer(ks->splattedKStream.put("timeout",ks),"_reverse-timeout"))
+                            .defaultBranch(Branched.withConsumer(ks->splattedKStream.put("final",ks),"_successful-reverse"));
         return splattedKStream;
 
     }
@@ -109,21 +110,21 @@ public class TransferProcessingTopology {
         KStream<String, TransferResponse> timeoutOnWithdraw = splattedKStreamWithdraw.get("timeout");
         KStream<String, TransferResponse> timeoutOnReverse = splattedKStreamReverse.get("timeout");
         Map<String,KStream<String,TransferResponse>> splattedKStream=new HashMap<>();
-        KStream<String, TransferResponse> mergedStreams = timeoutOnWithdraw.merge(timeoutOnReverse);
+        KStream<String, TransferResponse> mergedStreams = timeoutOnWithdraw.merge(timeoutOnReverse,Named.as("WITHDRAW_REVERSE_TIMEOUT_MERGE"));
         Map<String, KStream<String, TransferResponse>> retryNodes = retryMechanism(mergedStreams, splattedKStream);
         return retryNodes;
     }
     private Map<String,KStream<String,TransferResponse>> retryMechanism(KStream<String,TransferResponse> kStream,Map<String,KStream<String,TransferResponse>> retryNodes){
         if(atomicInteger.incrementAndGet()<PropertyConstants.getMaxRetryOnCoreGatewayTimeout()){
-    kStream.mapValues(coreGatewayStatusChecker)
+    kStream.mapValues(coreGatewayStatusChecker,Named.as("correlation-status-check"))
             .split(Named.as("retry-node"))
             .branch((s, transferResponse) -> transferResponse.getCoreGatewayTimeout(), Branched.withConsumer(ks -> retryMechanism(ks,retryNodes)))
-            .defaultBranch(Branched.withConsumer(ks->retryNodes.put("final"+atomicInteger.get(),ks)));
+            .defaultBranch(Branched.withConsumer(ks->retryNodes.put("final"+atomicInteger.decrementAndGet(),ks)));
         }else{
             KStream<String, TransferResponse> endOfRetries = kStream.mapValues(transferResponse -> {
                 transferResponse.addResponseStatus(ResponseStatus.FAILURE);
                 return transferResponse;
-            });
+            },Named.as("LastRetryNode-addFailureStatus"));
             retryNodes.put("final"+atomicInteger.get(),endOfRetries);
         }
         return retryNodes;
@@ -135,11 +136,11 @@ public class TransferProcessingTopology {
         Optional<KStream<String, TransferResponse>> retryNodesMerged = retryNodes.values().stream().reduce((kStream1, kStream2) -> kStream1.merge(kStream2));
         KStream<String, TransferResponse> reverseFinal = splattedKStreamReverse.get("final");
         KStream<String, TransferResponse> withdrawFinal = splattedKStreamWithdraw.get("final");
-        KStream<String, TransferResponse> allKStreamMerged=retryNodesMerged.isPresent()?withdrawFinal.merge(reverseFinal).merge(retryNodesMerged.get())
+        KStream<String, TransferResponse> allKStreamMerged=retryNodesMerged.isPresent()?withdrawFinal.merge(reverseFinal,Named.as("WITHDRAW_REVERSE_SUCCESS_MERGE")).merge(retryNodesMerged.get(),Named.as("RETRIES_MERGE"))
                                                                                        :withdrawFinal.merge(reverseFinal);
         allKStreamMerged.to(PropertyConstants.getNormalOutputTopic(),Produced.with(stringSerde,transferResponseSerde));
-        allKStreamMerged.filter((s, transferResponse) -> transferResponse.getRequestType()!=RequestType.REVERSE)
-                .mapValues(transferResponse -> TransferResponse.buildNotification(transferResponse))
+        allKStreamMerged.filter((s, transferResponse) -> transferResponse.getRequestType()!=RequestType.REVERSE,Named.as("filterOut-REVERSE"))
+                .mapValues(transferResponse -> TransferResponse.buildNotification(transferResponse),Named.as("build-locale-dependent-message"))
                 .groupByKey()//group by accountNo
                 .windowedBy(SessionWindows.ofInactivityGapWithNoGrace(Duration.ofMillis(1_000)))//no grace means out-of-order records ignored , so consider the record orders
                 /**
