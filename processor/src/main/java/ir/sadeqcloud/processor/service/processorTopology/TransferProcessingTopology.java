@@ -33,7 +33,6 @@ public class TransferProcessingTopology {
     private Serde<TransferRequest> transferRequestSerde;
     private Serde<TransferResponse> transferResponseSerde;
     private Serde<String> stringSerde =Serdes.String();
-    private Materialized<String,StringBuilder, SessionStore<Bytes,byte[]>> materializedStateStoreForNotification;
     private Serde<StringBuilder> stringBuilderSerde;
     private CoreGatewayIssueDocument coreGatewayIssueDocument;//TODO write common,base interface for these three coreGateway callers
     private CoreGatewayStatusChecker coreGatewayStatusChecker;
@@ -46,8 +45,7 @@ public class TransferProcessingTopology {
                                       CoreGatewayIssueDocument coreGatewayIssueDocument,
                                       CoreGatewayStatusChecker coreGatewayStatusChecker,
                                       Serde<StringBuilder> stringBuilderSerde,
-                                      CoreGatewayReverseIssue coreGatewayReverseIssue,
-                                      Materialized<String,StringBuilder, SessionStore<Bytes,byte[]>> materialized){
+                                      CoreGatewayReverseIssue coreGatewayReverseIssue){
         this.coreGatewayIssueDocument = coreGatewayIssueDocument;
         this.coreGatewayStatusChecker=coreGatewayStatusChecker;
         this.transferRequestSerde=transferRequestSerde;
@@ -55,7 +53,6 @@ public class TransferProcessingTopology {
         this.transferResponseSerde=transferResponseSerde;
         this.stringBuilderSerde=stringBuilderSerde;
         this.coreGatewayReverseIssue=coreGatewayReverseIssue;
-        this.materializedStateStoreForNotification=materialized;
     }
     @Bean("topologySourceNode")
     public KStream<String,TransferRequest> sourceProcessing(StreamsBuilder streamsBuilder){
@@ -152,7 +149,7 @@ public class TransferProcessingTopology {
                 .aggregate(()->new StringBuilder()
                            ,(k,v,VA)->{VA.append("\n");return VA.append(v);}
                            , (s, VA1, VA2) ->{VA1.append("\n");return VA1.append(VA2);}//merger , merge two sessions into one , in case of two session merge caused by out-of-order record arrival
-                           , materializedStateStoreForNotification);
+                           , materializedStateStoreForNotification());
         /**
          *  The result is written into a local SessionStore (which is basically an ever-updating materialized view).
          *  Furthermore, updates to the store are sent downstream into a KTable changelog stream.
@@ -163,4 +160,11 @@ public class TransferProcessingTopology {
         return null;
     }
 
+    private Materialized<String,StringBuilder, SessionStore<Bytes,byte[]>> materializedStateStoreForNotification(){
+        Materialized<String, StringBuilder, SessionStore<Bytes,byte[]>> notificationSerde = Materialized.as("notificationSerde");
+        notificationSerde.withKeySerde(stringSerde);
+        notificationSerde.withValueSerde(stringBuilderSerde);
+        notificationSerde.withCachingEnabled(); //in-memory cache, cause record compaction
+        return notificationSerde;
+    }
 }

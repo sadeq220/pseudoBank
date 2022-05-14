@@ -94,14 +94,6 @@ public class ProcessorApplication {
         streamsBuilderFactoryBean.setInfrastructureCustomizer(new KafkaStreamInfrastructureConfig());// to add state store to streamsBuilder
         return streamsBuilderFactoryBean;
     }
-    @Bean
-    public Materialized<String,StringBuilder, SessionStore<Bytes,byte[]>> materializedStateStoreForNotification(){
-        Materialized<String, StringBuilder, SessionStore<Bytes,byte[]>> notificationSerde = Materialized.as("notificationSerde");
-        notificationSerde.withKeySerde(Serdes.String());
-        notificationSerde.withValueSerde(stringBuilderSerde());
-        notificationSerde.withCachingEnabled(); //in-memory cache, cause record compaction
-        return notificationSerde;
-    }
 
     @Bean
     /**
@@ -109,7 +101,8 @@ public class ProcessorApplication {
      */
     public Serde<TransferRequest> inputJsonSerde(){
         JsonSerializer<TransferRequest> transferRequestJsonSerializer = new JsonSerializer<>();
-        JsonDeserializer<TransferRequest> transferRequestJsonDeserializer = new JsonDeserializer<>();
+        JsonDeserializer<TransferRequest> transferRequestJsonDeserializer = new JsonDeserializer<>(TransferRequest.class);
+        transferRequestJsonDeserializer.ignoreTypeHeaders();
         return Serdes.serdeFrom(transferRequestJsonSerializer,transferRequestJsonDeserializer);
     }
     @Bean
