@@ -22,9 +22,7 @@ public class RestfulCoreGateWay implements CoreGateway {
     @Override
     public TrackIssueDTO reverseWithdraw(String trackNo) {
         HttpHeaders httpHeaders = defaultHttpHeaders(trackNo);
-        UriComponents uriComponents = UriComponentsBuilder.newInstance()
-                .scheme("http")
-                .host(PropertyConstants.getCoreBankAddress())
+        UriComponents uriComponents = defaultUri()
                 .path("/reverse/document")
                 .queryParam("trackNo",trackNo)
                 .build();
@@ -36,9 +34,7 @@ public class RestfulCoreGateWay implements CoreGateway {
     @Override
     public TrackIssueDTO issueDocument(IssueRequest issueRequest) {
         HttpHeaders httpHeaders = defaultHttpHeaders(issueRequest.getCorrelationId());
-        UriComponents uriComponents = UriComponentsBuilder.newInstance()
-                .scheme("http")
-                .host(PropertyConstants.getCoreBankAddress())
+        UriComponents uriComponents = defaultUri()
                 .path("/issueRequest")
                 .build();
         RequestEntity requestEntity = new RequestEntity(issueRequest, httpHeaders , HttpMethod.PUT , uriComponents.toUri());
@@ -49,9 +45,7 @@ public class RestfulCoreGateWay implements CoreGateway {
     @Override
     public TrackIssueDTO trackStatus(String trackNo) {
         HttpHeaders httpHeaders = defaultHttpHeaders(trackNo);
-        UriComponents uriComponents = UriComponentsBuilder.newInstance()
-                .scheme("http")
-                .host(PropertyConstants.getCoreBankAddress())
+        UriComponents uriComponents = defaultUri()
                 .path("/track/status")
                 .queryParam("trackNo",trackNo)
                 .build();
@@ -64,5 +58,11 @@ public class RestfulCoreGateWay implements CoreGateway {
         httpHeaders.add("correlation-id",correlationId);
         httpHeaders.setContentType(MediaType.APPLICATION_JSON);
         return httpHeaders;
+    }
+    private UriComponentsBuilder defaultUri(){
+        return UriComponentsBuilder.newInstance()
+                .scheme("http")
+                .host(PropertyConstants.getCoreBankAddress().split(":")[0])
+                .port(PropertyConstants.getCoreBankAddress().split(":")[1]);
     }
 }
