@@ -48,9 +48,14 @@ public class PublishTransferRequest {
         throw new ClientResponseException("your request failed",clientResponse.getCorrelationId(), clientFailureResponse.getFailureReasons());
     }
     private ClientResponse getClientResponseFromKafkaConsumer(TransferRequest transferRequest){
+        try{
         IoCContainerUtil.registerBean(transferRequest.getCorrelationId(),transferRequest.getAccountNo(),transferRequest.getCorrelationId());
         IntermediaryObject intermediaryObject = IoCContainerUtil.getBean(IntermediaryObject.class, transferRequest.getCorrelationId());
         ClientResponse clientResponse = intermediaryObject.processTransferResponse();
-        return clientResponse;
+            return clientResponse;
+        }finally {
+            IoCContainerUtil.unregisterBean(transferRequest.getCorrelationId());
+        }
+
     }
 }

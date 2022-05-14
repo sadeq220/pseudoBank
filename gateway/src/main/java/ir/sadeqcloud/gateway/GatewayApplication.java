@@ -66,9 +66,10 @@ public class GatewayApplication {
         Map<String, Object> config=new HashMap<>();
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,"localhost:9092");
         config.put(ConsumerConfig.GROUP_ID_CONFIG,"transfer-group");
-        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,StringDeserializer.class);
-        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
-        return new DefaultKafkaConsumerFactory<>(config,new StringDeserializer(),new JsonSerde<TransferResponse>().deserializer());
+
+        JsonDeserializer<TransferResponse> transferResponseJsonDeserializer = new JsonDeserializer<>(TransferResponse.class);
+        transferResponseJsonDeserializer.ignoreTypeHeaders();
+        return new DefaultKafkaConsumerFactory<>(config,new StringDeserializer(),transferResponseJsonDeserializer);
     }
     @Bean
     /**

@@ -48,7 +48,7 @@ public class IntermediaryObject {
     }
     public ClientResponse processTransferResponse(){
         try {
-            TransferResponse transferResponseByKafkaConsumer = blockingQueue.poll(5_000, TimeUnit.MILLISECONDS);
+            TransferResponse transferResponseByKafkaConsumer = blockingQueue.poll(20_000, TimeUnit.MILLISECONDS);
             if (transferResponseByKafkaConsumer==null) // Timeout happened
                 throw new ClientResponseException("Timeout happened,result not determined.check later the status of your CorrelationId:"+correlationId);
             ResponseStatus[] responseStatuses = transferResponseByKafkaConsumer.getResponseStatuses().toArray(new ResponseStatus[]{});

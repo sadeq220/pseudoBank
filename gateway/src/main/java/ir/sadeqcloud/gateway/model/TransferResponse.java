@@ -1,5 +1,6 @@
 package ir.sadeqcloud.gateway.model;
 
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -11,8 +12,8 @@ public class TransferResponse {
         return responseStatuses;
     }
 
-    public void setResponseStatuses(Set<ResponseStatus> responseStatuses) {
-        this.responseStatuses = responseStatuses;
+    public void setResponseStatuses(ResponseStatus[] responseStatuses) {
+        this.responseStatuses.addAll(Arrays.asList(responseStatuses));
     }
 
     public String getCorrelationId() {

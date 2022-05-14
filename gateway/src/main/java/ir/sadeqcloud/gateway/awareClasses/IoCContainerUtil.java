@@ -15,12 +15,15 @@ import org.springframework.stereotype.Component;
 public class IoCContainerUtil implements ApplicationContextAware {
 
     private static ApplicationContext applicationContext;
+    private static BeanDefinitionRegistry beanDefinitionRegistry;
     /**
      * After All beans has been created this method will be called
      */
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
     this.applicationContext=applicationContext;
+        AutowireCapableBeanFactory autowireCapableBeanFactory = applicationContext.getAutowireCapableBeanFactory();
+        IoCContainerUtil.beanDefinitionRegistry = (BeanDefinitionRegistry) autowireCapableBeanFactory;
     }
     public static <T> T getBean(Class<T> tClass){
         return applicationContext.getBean(tClass);
@@ -37,13 +40,15 @@ public class IoCContainerUtil implements ApplicationContextAware {
      * A BeanDefinition describes a bean instance, which has property values, constructor argument values, and further information supplied by concrete implementations.
      */
     public static void registerBean(String beanName,String accountNo,String correlationId){
-        AutowireCapableBeanFactory autowireCapableBeanFactory = applicationContext.getAutowireCapableBeanFactory();
-        BeanDefinitionRegistry beanFactory = (BeanDefinitionRegistry) autowireCapableBeanFactory;
+
         GenericBeanDefinition genericBeanDefinition = new GenericBeanDefinition();
         genericBeanDefinition.setBeanClass(IntermediaryObject.class);
         genericBeanDefinition.getPropertyValues().addPropertyValue("accountNo",accountNo);
         genericBeanDefinition.getPropertyValues().addPropertyValue("correlationId",correlationId);
 
-        beanFactory.registerBeanDefinition(beanName, genericBeanDefinition);
+        beanDefinitionRegistry.registerBeanDefinition(beanName, genericBeanDefinition);
+    }
+    public static void unregisterBean(String beanName){
+        beanDefinitionRegistry.removeBeanDefinition(beanName);
     }
 }
