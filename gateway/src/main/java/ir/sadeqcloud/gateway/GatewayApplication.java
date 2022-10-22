@@ -16,6 +16,8 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.*;
+import org.springframework.kafka.support.mapping.DefaultJackson2JavaTypeMapper;
+import org.springframework.kafka.support.mapping.Jackson2JavaTypeMapper;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerde;
 import org.springframework.kafka.support.serializer.JsonSerializer;
@@ -32,14 +34,9 @@ public class GatewayApplication {
         SpringApplication.run(GatewayApplication.class, args);
     }
     @Bean
-    public ProducerFactory<String,String> producerFactory(){
+    public ProducerFactory<String,TransferRequest> producerFactory(Jackson2JavaTypeMapper javaTypeMapper){
         HashMap<String, Object> properties = new HashMap<>();
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,"localhost:9092");
-        properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        /**
-         * this will use jackson library to serialize
-         */
-        properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
         /**
          * from docs: it's better to use two option below instead of specifying max.retries
          */
@@ -47,28 +44,42 @@ public class GatewayApplication {
         properties.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG,120_000);// max time spent on a single message produce,(include inflightTimeOut and retries)
 
         properties.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG,"true");
-        return new DefaultKafkaProducerFactory<>(properties);
+        JsonSerializer<TransferRequest> valueJsonSerializer = new JsonSerializer<>();
+        valueJsonSerializer.setTypeMapper(javaTypeMapper);
+        return new DefaultKafkaProducerFactory(properties,new StringSerializer(),valueJsonSerializer);
     }
 
     /**
      * very thin wrapper around kafkaProducer
      */
     @Bean
-    public KafkaTemplate<String, TransferRequest> kafkaTemplate(){
-        return new KafkaTemplate(producerFactory());
+    public KafkaTemplate<String, TransferRequest> kafkaTemplate(ProducerFactory<String,TransferRequest> producerFactory){
+        KafkaTemplate kafkaTemplate = new KafkaTemplate(producerFactory);
+        kafkaTemplate.setDefaultTopic(PropertyConstants.getProducerTopic());
+        return kafkaTemplate;
+    }
+
+    @Bean
+    public Jackson2JavaTypeMapper javaTypeMapper(){
+        DefaultJackson2JavaTypeMapper defaultJackson2JavaTypeMapper = new DefaultJackson2JavaTypeMapper();
+        HashMap<String, Class<?>> idClassMapper = new HashMap<>();
+        idClassMapper.put("transferRequest",TransferRequest.class);
+        defaultJackson2JavaTypeMapper.setTypePrecedence(Jackson2JavaTypeMapper.TypePrecedence.TYPE_ID);
+        defaultJackson2JavaTypeMapper.setIdClassMapping(idClassMapper);
+        return defaultJackson2JavaTypeMapper;
     }
     @Bean
     public NewTopic createTopic(){
         return TopicBuilder.name(PropertyConstants.getProducerTopic()).partitions(2).replicas(1).build();
     }
     @Bean
-    public ConsumerFactory<String,TransferResponse> consumerFactory(){
+    public ConsumerFactory<String,TransferResponse> consumerFactory(Jackson2JavaTypeMapper javaTypeMapper){
         Map<String, Object> config=new HashMap<>();
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,"localhost:9092");
         config.put(ConsumerConfig.GROUP_ID_CONFIG,"transfer-group");
 
         JsonDeserializer<TransferResponse> transferResponseJsonDeserializer = new JsonDeserializer<>(TransferResponse.class);
-        transferResponseJsonDeserializer.ignoreTypeHeaders();
+        transferResponseJsonDeserializer.setTypeMapper(javaTypeMapper);
         return new DefaultKafkaConsumerFactory<>(config,new StringDeserializer(),transferResponseJsonDeserializer);
     }
     @Bean
@@ -76,9 +87,9 @@ public class GatewayApplication {
      * This factory is primarily for building containers for KafkaListener annotated methods but can also be used to create any container.
      * Only containers for KafkaListener annotated methods are added to the KafkaListenerEndpointRegistry(a container).
      */
-    public ConcurrentKafkaListenerContainerFactory<String, TransferResponse> kafkaListenerContainer(){
+    public ConcurrentKafkaListenerContainerFactory<String, TransferResponse> kafkaListenerContainer(ConsumerFactory<String,TransferResponse> consumerFactory){
         ConcurrentKafkaListenerContainerFactory<String, TransferResponse> listenerContainerFactory = new ConcurrentKafkaListenerContainerFactory<>();
-        listenerContainerFactory.setConsumerFactory(consumerFactory());
+        listenerContainerFactory.setConsumerFactory(consumerFactory);
         return listenerContainerFactory;
     }
 }
