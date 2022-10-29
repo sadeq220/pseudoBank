@@ -8,6 +8,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -16,6 +17,9 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.*;
+import org.springframework.kafka.listener.KafkaMessageListenerContainer;
+import org.springframework.kafka.retrytopic.RetryTopicConfiguration;
+import org.springframework.kafka.retrytopic.RetryTopicConfigurationBuilder;
 import org.springframework.kafka.support.mapping.DefaultJackson2JavaTypeMapper;
 import org.springframework.kafka.support.mapping.Jackson2JavaTypeMapper;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
@@ -34,7 +38,7 @@ public class GatewayApplication {
         SpringApplication.run(GatewayApplication.class, args);
     }
     @Bean
-    public ProducerFactory<String,TransferRequest> producerFactory(Jackson2JavaTypeMapper javaTypeMapper){
+    public ProducerFactory<String,?> producerFactory(Jackson2JavaTypeMapper javaTypeMapper){
         HashMap<String, Object> properties = new HashMap<>();
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,"localhost:9092");
         /**
@@ -44,7 +48,7 @@ public class GatewayApplication {
         properties.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG,120_000);// max time spent on a single message produce,(include inflightTimeOut and retries)
 
         properties.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG,"true");
-        JsonSerializer<TransferRequest> valueJsonSerializer = new JsonSerializer<>();
+        JsonSerializer valueJsonSerializer = new JsonSerializer<>();
         valueJsonSerializer.setTypeMapper(javaTypeMapper);
         return new DefaultKafkaProducerFactory(properties,new StringSerializer(),valueJsonSerializer);
     }
@@ -73,10 +77,11 @@ public class GatewayApplication {
         return TopicBuilder.name(PropertyConstants.getProducerTopic()).partitions(2).replicas(1).build();
     }
     @Bean
-    public ConsumerFactory<String,TransferResponse> consumerFactory(Jackson2JavaTypeMapper javaTypeMapper){
+    public ConsumerFactory<String,TransferResponse> consumerFactory(Jackson2JavaTypeMapper javaTypeMapper,
+                                                                    @Value("${kafka.consumer.group-id}") String consumerGroupId){
         Map<String, Object> config=new HashMap<>();
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,"localhost:9092");
-        config.put(ConsumerConfig.GROUP_ID_CONFIG,"transfer-group");
+        config.put(ConsumerConfig.GROUP_ID_CONFIG,consumerGroupId);
 
         JsonDeserializer<TransferResponse> transferResponseJsonDeserializer = new JsonDeserializer<>(TransferResponse.class);
         transferResponseJsonDeserializer.setTypeMapper(javaTypeMapper);
@@ -91,5 +96,24 @@ public class GatewayApplication {
         ConcurrentKafkaListenerContainerFactory<String, TransferResponse> listenerContainerFactory = new ConcurrentKafkaListenerContainerFactory<>();
         listenerContainerFactory.setConsumerFactory(consumerFactory);
         return listenerContainerFactory;
+    }
+    @Bean
+    public KafkaTemplate<String, TransferResponse> kafkaTemplateDLT(ProducerFactory<String,TransferResponse> producerFactory){
+        KafkaTemplate kafkaTemplate = new KafkaTemplate(producerFactory);
+        return kafkaTemplate;
+    }
+    /**
+     * Configures main, retry and DLT topics based on a main endpoint and provided configurations to accomplish a distributed retry / DLT pattern in a non-blocking fashion, at the expense of ordering guarantees.
+     * non-blocking means consumer thread (which calls "consumer.poll()") don't need to be paused
+     */
+    @Bean
+    public RetryTopicConfiguration retryBackoffDLT(KafkaTemplate<String,TransferResponse> kafkaTemplate,
+                                                   @Value("${kafka.consumer.group-id}") String consumerGroupId){
+        return RetryTopicConfigurationBuilder
+                .newInstance()
+                .dltSuffix("_"+consumerGroupId+"_DLT")
+                .maxAttempts(1)
+                .fixedBackOff(3000)
+                .create(kafkaTemplate);
     }
 }
